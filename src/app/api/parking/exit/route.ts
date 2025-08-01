@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifyToken } from '@/lib/auth'
 import { calculateHourlyBilling, isOverstay } from '@/lib/pricing'
 
 export async function POST(request: NextRequest) {
   try {
+    const token = request.cookies.get('token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const { numberPlate } = await request.json()
 
     if (!numberPlate) {

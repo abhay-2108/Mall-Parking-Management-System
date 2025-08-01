@@ -1,16 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Car, 
   Bike, 
   Zap, 
   Accessibility, 
+  LogOut, 
   Plus, 
   Minus,
   Search,
   Settings,
-  TrendingUp
+  TrendingUp,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -41,11 +47,13 @@ interface ParkingSlot {
 }
 
 export default function Dashboard() {
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [revenue, setRevenue] = useState<Revenue | null>(null)
   const [slots, setSlots] = useState<ParkingSlot[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+  const [operatorName, setOperatorName] = useState('Operator')
   
   // Entry form state
   const [entryForm, setEntryForm] = useState({
@@ -69,7 +77,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData()
+    checkAuth()
   }, [])
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/check')
+      if (!response.ok) {
+        router.push('/')
+      }
+    } catch (error) {
+      router.push('/')
+    }
+  }
 
   const loadDashboardData = async () => {
     try {
@@ -107,13 +127,13 @@ export default function Dashboard() {
       if (response.ok) {
         setEntryForm({ numberPlate: '', vehicleType: 'Car', billingType: 'Hourly', slotId: '' })
         loadDashboardData()
-        alert('Vehicle entry recorded successfully!')
+        showNotification('Vehicle entry recorded successfully!', 'success')
       } else {
         const data = await response.json()
-        alert(data.error || 'Entry failed')
+        showNotification(data.error || 'Entry failed', 'error')
       }
     } catch (error) {
-      alert('Network error')
+      showNotification('Network error', 'error')
     }
   }
 
@@ -130,13 +150,22 @@ export default function Dashboard() {
         const data = await response.json()
         setExitForm({ numberPlate: '' })
         loadDashboardData()
-        alert(`Exit processed! Amount: ₹${data.receipt.amount}`)
+        showNotification(`Exit processed! Amount: ₹${data.receipt.amount}`, 'success')
       } else {
         const data = await response.json()
-        alert(data.error || 'Exit failed')
+        showNotification(data.error || 'Exit failed', 'error')
       }
     } catch (error) {
-      alert('Network error')
+      showNotification('Network error', 'error')
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/')
+    } catch (error) {
+      console.error('Logout error:', error)
     }
   }
 
@@ -150,10 +179,32 @@ export default function Dashboard() {
 
       if (response.ok) {
         loadDashboardData()
+        showNotification('Slot status updated successfully!', 'success')
       }
     } catch (error) {
       console.error('Error updating slot status:', error)
+      showNotification('Failed to update slot status', 'error')
     }
+  }
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    // Create notification element
+    const notification = document.createElement('div')
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
+      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`
+    notification.innerHTML = `
+      <div class="flex items-center">
+        ${type === 'success' ? '<CheckCircle class="h-5 w-5 mr-2" />' : '<XCircle class="h-5 w-5 mr-2" />'}
+        <span>${message}</span>
+      </div>
+    `
+    document.body.appendChild(notification)
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      notification.remove()
+    }, 3000)
   }
 
   const getVehicleIcon = (type: string) => {
@@ -175,21 +226,48 @@ export default function Dashboard() {
     }
   }
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Available': return <CheckCircle className="h-4 w-4" />
+      case 'Occupied': return <Clock className="h-4 w-4" />
+      case 'Maintenance': return <AlertTriangle className="h-4 w-4" />
+      default: return <Settings className="h-4 w-4" />
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Loading dashboard...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white shadow">
+      <header className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Mall Parking System</h1>
+            <div className="flex items-center">
+              <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-4">
+                <Car className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Mall Parking System</h1>
+                <p className="text-sm text-gray-600">Welcome back, {operatorName}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -197,9 +275,9 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-3 bg-blue-100 rounded-lg">
                 <Car className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
@@ -209,9 +287,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-3 bg-green-100 rounded-lg">
                 <Plus className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
@@ -221,9 +299,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
             <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
+              <div className="p-3 bg-red-100 rounded-lg">
                 <Minus className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
@@ -233,9 +311,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
+              <div className="p-3 bg-yellow-100 rounded-lg">
                 <Settings className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="ml-4">
@@ -248,80 +326,93 @@ export default function Dashboard() {
 
         {/* Revenue Card */}
         {revenue && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <div className="flex items-center mb-4">
-              <TrendingUp className="h-6 w-6 text-green-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Today's Revenue</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
+            <div className="flex items-center mb-6">
+              <div className="p-3 bg-green-100 rounded-lg mr-4">
+                <TrendingUp className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Today's Revenue</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">₹{revenue.today}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-green-600">₹{revenue.today}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Hourly Revenue</p>
-                <p className="text-xl font-semibold text-blue-600">₹{revenue.hourly}</p>
+              <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Hourly Revenue</p>
+                <p className="text-2xl font-semibold text-blue-600">₹{revenue.hourly}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Day Pass Revenue</p>
-                <p className="text-xl font-semibold text-purple-600">₹{revenue.dayPass}</p>
+              <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Day Pass Revenue</p>
+                <p className="text-2xl font-semibold text-purple-600">₹{revenue.dayPass}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8 px-6">
               {[
-                { id: 'overview', name: 'Overview' },
-                { id: 'entry', name: 'Vehicle Entry' },
-                { id: 'exit', name: 'Vehicle Exit' },
-                { id: 'slots', name: 'Slot Management' }
+                { id: 'overview', name: 'Overview', icon: <Car className="h-4 w-4" /> },
+                { id: 'entry', name: 'Vehicle Entry', icon: <Plus className="h-4 w-4" /> },
+                { id: 'exit', name: 'Vehicle Exit', icon: <Minus className="h-4 w-4" /> },
+                { id: 'slots', name: 'Slot Management', icon: <Settings className="h-4 w-4" /> }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors duration-200 ${
                     activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {tab.name}
+                  {tab.icon}
+                  <span>{tab.name}</span>
                 </button>
               ))}
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900">Active Sessions</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-900">Active Sessions</h3>
+                  <div className="text-sm text-gray-500">
+                    {slots.filter(slot => slot.status === 'Occupied').length} active vehicles
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {slots
                     .filter(slot => slot.status === 'Occupied')
                     .map(slot => (
-                      <div key={slot.id} className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
+                      <div key={slot.id} className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+                        <div className="flex items-center justify-between mb-4">
                           <div>
-                            <p className="font-medium text-gray-900">{slot.slotNumber}</p>
+                            <h4 className="text-lg font-semibold text-gray-900">{slot.slotNumber}</h4>
                             <p className="text-sm text-gray-600">{slot.slotType}</p>
-                            {slot.parkingSessions[0] && (
-                              <div className="flex items-center mt-2">
-                                {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
-                                <span className="ml-1 text-sm text-gray-600">
-                                  {slot.parkingSessions[0].vehicle.numberPlate}
-                                </span>
-                              </div>
-                            )}
                           </div>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(slot.status)}`}>
-                            {slot.status}
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full flex items-center ${getStatusColor(slot.status)}`}>
+                            {getStatusIcon(slot.status)}
+                            <span className="ml-1">{slot.status}</span>
                           </span>
                         </div>
+                        
+                        {slot.parkingSessions[0] && (
+                          <div className="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                              {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
+                              <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -330,26 +421,27 @@ export default function Dashboard() {
 
             {/* Entry Tab */}
             {activeTab === 'entry' && (
-              <div className="max-w-md">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Entry</h3>
-                <form onSubmit={handleEntry} className="space-y-4">
+              <div className="max-w-lg">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Vehicle Entry</h3>
+                <form onSubmit={handleEntry} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Number Plate</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Number Plate</label>
                     <input
                       type="text"
                       value={entryForm.numberPlate}
                       onChange={(e) => setEntryForm({...entryForm, numberPlate: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
+                      placeholder="Enter vehicle number plate"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle Type</label>
                     <select
                       value={entryForm.vehicleType}
                       onChange={(e) => setEntryForm({...entryForm, vehicleType: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
                     >
                       <option value="Car">Car</option>
                       <option value="Bike">Bike</option>
@@ -359,11 +451,11 @@ export default function Dashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Billing Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Billing Type</label>
                     <select
                       value={entryForm.billingType}
                       onChange={(e) => setEntryForm({...entryForm, billingType: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
                     >
                       <option value="Hourly">Hourly</option>
                       <option value="DayPass">Day Pass (₹150)</option>
@@ -372,7 +464,7 @@ export default function Dashboard() {
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105"
                   >
                     Record Entry
                   </button>
@@ -382,23 +474,24 @@ export default function Dashboard() {
 
             {/* Exit Tab */}
             {activeTab === 'exit' && (
-              <div className="max-w-md">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Exit</h3>
-                <form onSubmit={handleExit} className="space-y-4">
+              <div className="max-w-lg">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">Vehicle Exit</h3>
+                <form onSubmit={handleExit} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Number Plate</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Number Plate</label>
                     <input
                       type="text"
                       value={exitForm.numberPlate}
                       onChange={(e) => setExitForm({...exitForm, numberPlate: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white transition-all duration-200"
+                      placeholder="Enter vehicle number plate"
                       required
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
                   >
                     Process Exit
                   </button>
@@ -409,13 +502,13 @@ export default function Dashboard() {
             {/* Slots Tab */}
             {activeTab === 'slots' && (
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Slot Management</h3>
-                  <div className="flex space-x-2">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900">Slot Management</h3>
+                  <div className="flex space-x-3">
                     <select
                       value={filters.slotType}
                       onChange={(e) => setFilters({...filters, slotType: e.target.value})}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">All Types</option>
                       <option value="Regular">Regular</option>
@@ -426,7 +519,7 @@ export default function Dashboard() {
                     <select
                       value={filters.status}
                       onChange={(e) => setFilters({...filters, status: e.target.value})}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">All Status</option>
                       <option value="Available">Available</option>
@@ -436,27 +529,33 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {slots
                     .filter(slot => 
                       (!filters.slotType || slot.slotType === filters.slotType) &&
                       (!filters.status || slot.status === filters.status)
                     )
                     .map(slot => (
-                      <div key={slot.id} className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-gray-900">{slot.slotNumber}</h4>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(slot.status)}`}>
-                            {slot.status}
+                      <div key={slot.id} className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900">{slot.slotNumber}</h4>
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full flex items-center ${getStatusColor(slot.status)}`}>
+                            {getStatusIcon(slot.status)}
+                            <span className="ml-1">{slot.status}</span>
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">{slot.slotType}</p>
+                        <p className="text-sm text-gray-600 mb-4">{slot.slotType}</p>
                         
                         {slot.parkingSessions[0] && (
-                          <div className="mb-3">
-                            <div className="flex items-center text-sm text-gray-600">
-                              {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
-                              <span className="ml-1">{slot.parkingSessions[0].vehicle.numberPlate}</span>
+                          <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex items-center">
+                              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                                {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
+                                <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -465,7 +564,7 @@ export default function Dashboard() {
                           {slot.status === 'Available' && (
                             <button
                               onClick={() => updateSlotStatus(slot.id, 'Maintenance')}
-                              className="flex-1 px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                              className="flex-1 px-3 py-2 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors duration-200"
                             >
                               Mark Maintenance
                             </button>
@@ -473,7 +572,7 @@ export default function Dashboard() {
                           {slot.status === 'Maintenance' && (
                             <button
                               onClick={() => updateSlotStatus(slot.id, 'Available')}
-                              className="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                              className="flex-1 px-3 py-2 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200"
                             >
                               Mark Available
                             </button>
