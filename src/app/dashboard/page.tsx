@@ -6,7 +6,7 @@ import {
   Car, 
   Bike, 
   Zap, 
-  Wheelchair, 
+  Accessibility, 
   LogOut, 
   Plus, 
   Minus,
@@ -173,7 +173,7 @@ export default function Dashboard() {
       case 'Car': return <Car className="h-4 w-4" />
       case 'Bike': return <Bike className="h-4 w-4" />
       case 'EV': return <Zap className="h-4 w-4" />
-      case 'Handicap': return <Wheelchair className="h-4 w-4" />
+      case 'Handicap': return <Accessibility className="h-4 w-4" />
       default: return <Car className="h-4 w-4" />
     }
   }
@@ -354,22 +354,22 @@ export default function Dashboard() {
                 <form onSubmit={handleEntry} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Number Plate</label>
-                    <input
-                      type="text"
-                      value={entryForm.numberPlate}
-                      onChange={(e) => setEntryForm({...entryForm, numberPlate: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
+                                         <input
+                       type="text"
+                       value={entryForm.numberPlate}
+                       onChange={(e) => setEntryForm({...entryForm, numberPlate: e.target.value})}
+                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                       required
+                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
-                    <select
-                      value={entryForm.vehicleType}
-                      onChange={(e) => setEntryForm({...entryForm, vehicleType: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
+                                         <select
+                       value={entryForm.vehicleType}
+                       onChange={(e) => setEntryForm({...entryForm, vehicleType: e.target.value})}
+                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                     >
                       <option value="Car">Car</option>
                       <option value="Bike">Bike</option>
                       <option value="EV">EV</option>
@@ -379,11 +379,11 @@ export default function Dashboard() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Billing Type</label>
-                    <select
-                      value={entryForm.billingType}
-                      onChange={(e) => setEntryForm({...entryForm, billingType: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
+                                         <select
+                       value={entryForm.billingType}
+                       onChange={(e) => setEntryForm({...entryForm, billingType: e.target.value})}
+                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                     >
                       <option value="Hourly">Hourly</option>
                       <option value="DayPass">Day Pass (₹150)</option>
                     </select>
@@ -406,13 +406,13 @@ export default function Dashboard() {
                 <form onSubmit={handleExit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Number Plate</label>
-                    <input
-                      type="text"
-                      value={exitForm.numberPlate}
-                      onChange={(e) => setExitForm({...exitForm, numberPlate: e.target.value})}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
+                                         <input
+                       type="text"
+                       value={exitForm.numberPlate}
+                       onChange={(e) => setExitForm({...exitForm, numberPlate: e.target.value})}
+                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                       required
+                     />
                   </div>
 
                   <button
