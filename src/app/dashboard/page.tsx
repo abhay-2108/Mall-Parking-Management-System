@@ -16,8 +16,12 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Edit,
+  Calendar,
+  X
 } from 'lucide-react'
+import { formatISTTime, getCurrentIST } from '@/lib/time-utils'
 
 interface DashboardStats {
   totalSlots: number
@@ -39,6 +43,11 @@ interface ParkingSlot {
   slotType: string
   status: string
   parkingSessions: Array<{
+    id: string
+    entryTime: string
+    exitTime?: string
+    billingAmount?: number
+    billingType: string
     vehicle: {
       numberPlate: string
       type: string
@@ -73,6 +82,18 @@ export default function Dashboard() {
     slotType: '',
     status: '',
     search: ''
+  })
+
+  // Time editing modal state
+  const [timeEditModal, setTimeEditModal] = useState({
+    isOpen: false,
+    slotId: '',
+    slotNumber: '',
+    currentEntryTime: '',
+    currentExitTime: '',
+    newEntryTime: '',
+    newExitTime: '',
+    vehicleInfo: null as any
   })
 
   useEffect(() => {
@@ -184,6 +205,47 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error updating slot status:', error)
       showNotification('Failed to update slot status', 'error')
+    }
+  }
+
+  const openTimeEditModal = (slot: ParkingSlot) => {
+    const activeSession = slot.parkingSessions[0]
+    if (activeSession) {
+      setTimeEditModal({
+        isOpen: true,
+        slotId: slot.id,
+        slotNumber: slot.slotNumber,
+        currentEntryTime: formatISTTime(new Date(activeSession.entryTime)),
+        currentExitTime: activeSession.exitTime ? formatISTTime(new Date(activeSession.exitTime)) : '',
+        newEntryTime: formatISTTime(new Date(activeSession.entryTime)),
+        newExitTime: activeSession.exitTime ? formatISTTime(new Date(activeSession.exitTime)) : '',
+        vehicleInfo: activeSession.vehicle
+      })
+    }
+  }
+
+  const handleTimeUpdate = async () => {
+    try {
+      const response = await fetch('/api/slots/update-time', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slotId: timeEditModal.slotId,
+          newEntryTime: timeEditModal.newEntryTime,
+          newExitTime: timeEditModal.newExitTime
+        })
+      })
+
+      if (response.ok) {
+        setTimeEditModal({ ...timeEditModal, isOpen: false })
+        loadDashboardData()
+        showNotification('Slot time updated successfully!', 'success')
+      } else {
+        const data = await response.json()
+        showNotification(data.error || 'Failed to update time', 'error')
+      }
+    } catch (error) {
+      showNotification('Network error', 'error')
     }
   }
 
@@ -403,14 +465,31 @@ export default function Dashboard() {
                         </div>
                         
                         {slot.parkingSessions[0] && (
-                          <div className="flex items-center p-3 bg-white rounded-lg border border-gray-200">
-                            <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                              {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
+                          <div className="space-y-3">
+                            <div className="flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                                {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
+                                <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
-                              <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
+                            
+                            <div className="text-sm text-gray-600">
+                              <p><span className="font-medium">Entry:</span> {formatISTTime(new Date(slot.parkingSessions[0].entryTime))}</p>
+                              {slot.parkingSessions[0].exitTime && (
+                                <p><span className="font-medium">Exit:</span> {formatISTTime(new Date(slot.parkingSessions[0].exitTime))}</p>
+                              )}
                             </div>
+                            
+                            <button
+                              onClick={() => openTimeEditModal(slot)}
+                              className="w-full flex items-center justify-center px-3 py-2 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit Time
+                            </button>
                           </div>
                         )}
                       </div>
@@ -557,6 +636,12 @@ export default function Dashboard() {
                                 <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
                               </div>
                             </div>
+                            <div className="mt-2 text-xs text-gray-600">
+                              <p>Entry: {formatISTTime(new Date(slot.parkingSessions[0].entryTime))}</p>
+                              {slot.parkingSessions[0].exitTime && (
+                                <p>Exit: {formatISTTime(new Date(slot.parkingSessions[0].exitTime))}</p>
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -577,6 +662,14 @@ export default function Dashboard() {
                               Mark Available
                             </button>
                           )}
+                          {slot.status === 'Occupied' && (
+                            <button
+                              onClick={() => openTimeEditModal(slot)}
+                              className="flex-1 px-3 py-2 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                            >
+                              Edit Time
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -586,6 +679,75 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Time Edit Modal */}
+      {timeEditModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Edit Slot Time</h3>
+              <button
+                onClick={() => setTimeEditModal({ ...timeEditModal, isOpen: false })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Slot: {timeEditModal.slotNumber}</p>
+                {timeEditModal.vehicleInfo && (
+                  <p className="text-sm text-gray-600">
+                    Vehicle: {timeEditModal.vehicleInfo.numberPlate} ({timeEditModal.vehicleInfo.type})
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Entry Time (IST)</label>
+                <input
+                  type="datetime-local"
+                  value={timeEditModal.newEntryTime.replace(' ', 'T')}
+                  onChange={(e) => setTimeEditModal({
+                    ...timeEditModal,
+                    newEntryTime: e.target.value.replace('T', ' ')
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Exit Time (IST) - Optional</label>
+                <input
+                  type="datetime-local"
+                  value={timeEditModal.newExitTime ? timeEditModal.newExitTime.replace(' ', 'T') : ''}
+                  onChange={(e) => setTimeEditModal({
+                    ...timeEditModal,
+                    newExitTime: e.target.value ? e.target.value.replace('T', ' ') : ''
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => setTimeEditModal({ ...timeEditModal, isOpen: false })}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleTimeUpdate}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Update Time
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
