@@ -20,7 +20,14 @@ import {
   Edit,
   Calendar,
   X,
-  MapPin
+  MapPin,
+  Sparkles,
+  Activity,
+  Users,
+  DollarSign,
+  BarChart3,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react'
 import { formatISTTime, getCurrentIST } from '@/lib/time-utils'
 
@@ -260,13 +267,13 @@ export default function Dashboard() {
   const showNotification = (message: string, type: 'success' | 'error') => {
     // Create notification element
     const notification = document.createElement('div')
-    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    notification.className = `fixed top-4 right-4 p-4 rounded-2xl shadow-2xl z-50 transform transition-all duration-300 backdrop-blur-lg ${
+      type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border border-green-400/30' : 'bg-gradient-to-r from-red-500 to-pink-500 text-white border border-red-400/30'
     }`
     notification.innerHTML = `
       <div class="flex items-center">
-        ${type === 'success' ? '<CheckCircle class="h-5 w-5 mr-2" />' : '<XCircle class="h-5 w-5 mr-2" />'}
-        <span>${message}</span>
+        ${type === 'success' ? '<CheckCircle class="h-5 w-5 mr-3" />' : '<XCircle class="h-5 w-5 mr-3" />'}
+        <span class="font-semibold">${message}</span>
       </div>
     `
     document.body.appendChild(notification)
@@ -289,10 +296,10 @@ export default function Dashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Available': return 'bg-green-100 text-green-800'
-      case 'Occupied': return 'bg-red-100 text-red-800'
-      case 'Maintenance': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'Available': return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+      case 'Occupied': return 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
+      case 'Maintenance': return 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
+      default: return 'bg-gradient-to-r from-gray-500 to-slate-500 text-white'
     }
   }
 
@@ -332,33 +339,40 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-xl text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-6"></div>
+          <p className="text-2xl text-white font-semibold">Loading dashboard...</p>
+          <div className="mt-4 flex space-x-2 justify-center">
+            <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+            <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="bg-white shadow-lg border-b border-gray-200">
+      <header className="bg-white/80 backdrop-blur-lg shadow-2xl border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mr-4">
-                <Car className="h-6 w-6 text-white" />
+              <div className="h-12 w-12 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                <Car className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Mall Parking System</h1>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  Mall Parking System
+                </h1>
                 <p className="text-sm text-gray-600">Welcome back, {operatorName}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              className="flex items-center px-6 py-3 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-300 transform hover:scale-105"
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -369,51 +383,67 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Car className="h-6 w-6 text-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20 hover:shadow-3xl transition-all duration-500 transform hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Slots</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.totalSlots}</p>
+                <div className="flex items-center mt-2 text-green-600">
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">All Slots</span>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Slots</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.totalSlots}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Plus className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Available</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.availableSlots}</p>
+              <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl">
+                <BarChart3 className="h-8 w-8 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <Minus className="h-6 w-6 text-red-600" />
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20 hover:shadow-3xl transition-all duration-500 transform hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Available</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.availableSlots}</p>
+                <div className="flex items-center mt-2 text-green-600">
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Ready</span>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Occupied</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.occupiedSlots}</p>
+              <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl">
+                <CheckCircle className="h-8 w-8 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center">
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <Settings className="h-6 w-6 text-yellow-600" />
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20 hover:shadow-3xl transition-all duration-500 transform hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Occupied</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.occupiedSlots}</p>
+                <div className="flex items-center mt-2 text-red-600">
+                  <ArrowDownRight className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">In Use</span>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Maintenance</p>
-                <p className="text-2xl font-bold text-gray-900">{stats?.maintenanceSlots}</p>
+              <div className="p-4 bg-gradient-to-r from-red-500 to-pink-500 rounded-2xl">
+                <Clock className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20 hover:shadow-3xl transition-all duration-500 transform hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-2">Maintenance</p>
+                <p className="text-3xl font-bold text-gray-900">{stats?.maintenanceSlots}</p>
+                <div className="flex items-center mt-2 text-yellow-600">
+                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Under Repair</span>
+                </div>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl">
+                <Settings className="h-8 w-8 text-white" />
               </div>
             </div>
           </div>
@@ -421,46 +451,64 @@ export default function Dashboard() {
 
         {/* Revenue Card */}
         {revenue && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
-            <div className="flex items-center mb-6">
-              <div className="p-3 bg-green-100 rounded-lg mr-4">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-8 mb-8 border border-white/20">
+            <div className="flex items-center mb-8">
+              <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl mr-6">
+                <TrendingUp className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900">Today's Revenue</h3>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">Today's Revenue</h3>
+                <p className="text-gray-600">Real-time financial overview</p>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-green-600">₹{revenue.today}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
+                <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 mb-2">Total Revenue</p>
+                <p className="text-4xl font-bold text-green-600">₹{revenue.today}</p>
+                <div className="flex items-center justify-center mt-2 text-green-600">
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Today</span>
+                </div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Hourly Revenue</p>
-                <p className="text-2xl font-semibold text-blue-600">₹{revenue.hourly}</p>
+              <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200">
+                <Activity className="h-8 w-8 text-blue-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 mb-2">Hourly Revenue</p>
+                <p className="text-3xl font-bold text-blue-600">₹{revenue.hourly}</p>
+                <div className="flex items-center justify-center mt-2 text-blue-600">
+                  <Clock className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Hourly</span>
+                </div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Day Pass Revenue</p>
-                <p className="text-2xl font-semibold text-purple-600">₹{revenue.dayPass}</p>
+              <div className="text-center p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200">
+                <Users className="h-8 w-8 text-purple-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 mb-2">Day Pass Revenue</p>
+                <p className="text-3xl font-bold text-purple-600">₹{revenue.dayPass}</p>
+                <div className="flex items-center justify-center mt-2 text-purple-600">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  <span className="text-sm font-medium">Day Pass</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20">
+          <div className="border-b border-gray-200/50">
+            <nav className="-mb-px flex space-x-8 px-8">
               {[
-                { id: 'overview', name: 'Overview', icon: <Car className="h-4 w-4" /> },
-                { id: 'entry', name: 'Vehicle Entry', icon: <Plus className="h-4 w-4" /> },
-                { id: 'exit', name: 'Vehicle Exit', icon: <Minus className="h-4 w-4" /> },
-                { id: 'slots', name: 'Slot Management', icon: <Settings className="h-4 w-4" /> }
+                { id: 'overview', name: 'Overview', icon: <BarChart3 className="h-5 w-5" /> },
+                { id: 'entry', name: 'Vehicle Entry', icon: <Plus className="h-5 w-5" /> },
+                { id: 'exit', name: 'Vehicle Exit', icon: <Minus className="h-5 w-5" /> },
+                { id: 'slots', name: 'Slot Management', icon: <Settings className="h-5 w-5" /> }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors duration-200 ${
+                  className={`py-6 px-1 border-b-2 font-semibold text-sm flex items-center space-x-3 transition-all duration-300 ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'border-purple-500 text-purple-600 bg-purple-50/50 rounded-t-2xl'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -474,53 +522,64 @@ export default function Dashboard() {
           <div className="p-8">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-900">Active Sessions</h3>
-                  <div className="text-sm text-gray-500">
-                    {slots.filter(slot => slot.status === 'Occupied').length} active vehicles
+                  <h3 className="text-2xl font-bold text-gray-900">Active Sessions</h3>
+                  <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full">
+                    <Activity className="h-4 w-4" />
+                    <span className="text-sm font-semibold">
+                      {slots.filter(slot => slot.status === 'Occupied').length} active vehicles
+                    </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {slots
                     .filter(slot => slot.status === 'Occupied')
                     .map(slot => (
-                      <div key={slot.id} className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow duration-300">
-                        <div className="flex items-center justify-between mb-4">
+                      <div key={slot.id} className="bg-gradient-to-r from-white to-purple-50 rounded-3xl p-8 border border-purple-200/50 hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
+                        <div className="flex items-center justify-between mb-6">
                           <div>
-                            <h4 className="text-lg font-semibold text-gray-900">{slot.slotNumber}</h4>
+                            <h4 className="text-xl font-bold text-gray-900">{slot.slotNumber}</h4>
                             <p className="text-sm text-gray-600">{slot.slotType}</p>
                           </div>
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full flex items-center ${getStatusColor(slot.status)}`}>
+                          <span className={`px-4 py-2 text-xs font-bold rounded-full flex items-center ${getStatusColor(slot.status)}`}>
                             {getStatusIcon(slot.status)}
-                            <span className="ml-1">{slot.status}</span>
+                            <span className="ml-2">{slot.status}</span>
                           </span>
                         </div>
                         
                         {slot.parkingSessions[0] && (
-                          <div className="space-y-3">
-                            <div className="flex items-center p-3 bg-white rounded-lg border border-gray-200">
-                              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                          <div className="space-y-4">
+                            <div className="flex items-center p-4 bg-white rounded-2xl border border-purple-200/50 shadow-lg">
+                              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl mr-4">
                                 {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
+                                <p className="font-bold text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
                                 <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
                               </div>
                             </div>
                             
-                            <div className="text-sm text-gray-600">
-                              <p><span className="font-medium">Entry:</span> {formatISTTime(new Date(slot.parkingSessions[0].entryTime))}</p>
+                            <div className="text-sm text-gray-600 space-y-2">
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-purple-500" />
+                                <span className="font-medium">Entry:</span>
+                                <span className="ml-2">{formatISTTime(new Date(slot.parkingSessions[0].entryTime))}</span>
+                              </div>
                               {slot.parkingSessions[0].exitTime && (
-                                <p><span className="font-medium">Exit:</span> {formatISTTime(new Date(slot.parkingSessions[0].exitTime))}</p>
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-2 text-purple-500" />
+                                  <span className="font-medium">Exit:</span>
+                                  <span className="ml-2">{formatISTTime(new Date(slot.parkingSessions[0].exitTime))}</span>
+                                </div>
                               )}
                             </div>
                             
                             <button
                               onClick={() => openTimeEditModal(slot)}
-                              className="w-full flex items-center justify-center px-3 py-2 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                              className="w-full flex items-center justify-center px-4 py-3 text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                             >
-                              <Edit className="h-3 w-3 mr-1" />
+                              <Edit className="h-4 w-4 mr-2" />
                               Edit Time
                             </button>
                           </div>
@@ -533,27 +592,27 @@ export default function Dashboard() {
 
             {/* Entry Tab */}
             {activeTab === 'entry' && (
-              <div className="max-w-lg">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Vehicle Entry</h3>
-                <form onSubmit={handleEntry} className="space-y-6">
+              <div className="max-w-2xl">
+                <h3 className="text-2xl font-bold text-gray-900 mb-8">Vehicle Entry</h3>
+                <form onSubmit={handleEntry} className="space-y-8">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Number Plate</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Number Plate</label>
                     <input
                       type="text"
                       value={entryForm.numberPlate}
                       onChange={(e) => setEntryForm({...entryForm, numberPlate: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 text-gray-900 bg-white transition-all duration-300 placeholder-gray-500"
                       placeholder="Enter vehicle number plate"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Vehicle Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Vehicle Type</label>
                     <select
                       value={entryForm.vehicleType}
                       onChange={(e) => setEntryForm({...entryForm, vehicleType: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 text-gray-900 bg-white transition-all duration-300"
                     >
                       <option value="Car">Car</option>
                       <option value="Bike">Bike</option>
@@ -563,11 +622,11 @@ export default function Dashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Billing Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Billing Type</label>
                     <select
                       value={entryForm.billingType}
                       onChange={(e) => setEntryForm({...entryForm, billingType: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 text-gray-900 bg-white transition-all duration-300"
                     >
                       <option value="Hourly">Hourly</option>
                       <option value="DayPass">Day Pass (₹150)</option>
@@ -575,29 +634,29 @@ export default function Dashboard() {
                   </div>
 
                   {/* Manual Slot Selection */}
-                  <div className="space-y-4">
-                    <div className="flex items-center">
+                  <div className="space-y-6">
+                    <div className="flex items-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200">
                       <input
                         type="checkbox"
                         id="manualSlotSelection"
                         checked={entryForm.manualSlotSelection}
                         onChange={(e) => setEntryForm({...entryForm, manualSlotSelection: e.target.checked, slotId: ''})}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                       />
-                      <label htmlFor="manualSlotSelection" className="ml-2 block text-sm font-medium text-gray-700">
+                      <label htmlFor="manualSlotSelection" className="ml-3 block text-sm font-semibold text-gray-700">
                         Manually select parking slot
                       </label>
                     </div>
 
                     {entryForm.manualSlotSelection && (
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">
                           Select Parking Slot
                         </label>
                         <select
                           value={entryForm.slotId}
                           onChange={(e) => setEntryForm({...entryForm, slotId: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
+                          className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 text-gray-900 bg-white transition-all duration-300"
                           required={entryForm.manualSlotSelection}
                         >
                           <option value="">Choose a slot...</option>
@@ -607,16 +666,16 @@ export default function Dashboard() {
                             </option>
                           ))}
                         </select>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-2 text-sm text-purple-600 font-medium">
                           Available compatible slots for {entryForm.vehicleType}: {getCompatibleSlots(entryForm.vehicleType).length}
                         </p>
                       </div>
                     )}
 
                     {!entryForm.manualSlotSelection && (
-                      <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <MapPin className="h-4 w-4 text-blue-600 mr-2" />
-                        <span className="text-sm text-blue-700">
+                      <div className="flex items-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200">
+                        <MapPin className="h-5 w-5 text-blue-600 mr-3" />
+                        <span className="text-sm text-blue-700 font-medium">
                           Automatic slot assignment will be used
                         </span>
                       </div>
@@ -625,8 +684,9 @@ export default function Dashboard() {
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105"
+                    className="w-full flex justify-center items-center py-4 px-6 border-2 border-transparent rounded-2xl shadow-2xl text-lg font-bold text-white bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-purple-500/50 transition-all duration-300 transform hover:scale-105"
                   >
+                    <Sparkles className="h-5 w-5 mr-2" />
                     Record Entry
                   </button>
                 </form>
@@ -635,16 +695,16 @@ export default function Dashboard() {
 
             {/* Exit Tab */}
             {activeTab === 'exit' && (
-              <div className="max-w-lg">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Vehicle Exit</h3>
-                <form onSubmit={handleExit} className="space-y-6">
+              <div className="max-w-2xl">
+                <h3 className="text-2xl font-bold text-gray-900 mb-8">Vehicle Exit</h3>
+                <form onSubmit={handleExit} className="space-y-8">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Number Plate</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Number Plate</label>
                     <input
                       type="text"
                       value={exitForm.numberPlate}
                       onChange={(e) => setExitForm({...exitForm, numberPlate: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 bg-white transition-all duration-200"
+                      className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-red-500/50 focus:border-red-400 text-gray-900 bg-white transition-all duration-300 placeholder-gray-500"
                       placeholder="Enter vehicle number plate"
                       required
                     />
@@ -652,8 +712,9 @@ export default function Dashboard() {
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
+                    className="w-full flex justify-center items-center py-4 px-6 border-2 border-transparent rounded-2xl shadow-2xl text-lg font-bold text-white bg-gradient-to-r from-red-600 via-pink-600 to-red-600 hover:from-red-700 hover:via-pink-700 hover:to-red-700 focus:outline-none focus:ring-4 focus:ring-red-500/50 transition-all duration-300 transform hover:scale-105"
                   >
+                    <Minus className="h-5 w-5 mr-2" />
                     Process Exit
                   </button>
                 </form>
@@ -663,13 +724,13 @@ export default function Dashboard() {
             {/* Slots Tab */}
             {activeTab === 'slots' && (
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-gray-900">Slot Management</h3>
-                  <div className="flex space-x-3">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900">Slot Management</h3>
+                  <div className="flex space-x-4">
                     <select
                       value={filters.slotType}
                       onChange={(e) => setFilters({...filters, slotType: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-6 py-3 border-2 border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 bg-white"
                     >
                       <option value="">All Types</option>
                       <option value="Regular">Regular</option>
@@ -680,7 +741,7 @@ export default function Dashboard() {
                     <select
                       value={filters.status}
                       onChange={(e) => setFilters({...filters, status: e.target.value})}
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-6 py-3 border-2 border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 bg-white"
                     >
                       <option value="">All Status</option>
                       <option value="Available">Available</option>
@@ -690,35 +751,35 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                   {slots
                     .filter(slot => 
                       (!filters.slotType || slot.slotType === filters.slotType) &&
                       (!filters.status || slot.status === filters.status)
                     )
                     .map(slot => (
-                      <div key={slot.id} className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+                      <div key={slot.id} className="bg-gradient-to-r from-white to-purple-50 rounded-3xl p-6 border border-purple-200/50 hover:shadow-2xl transition-all duration-500 transform hover:scale-105">
                         <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-lg font-semibold text-gray-900">{slot.slotNumber}</h4>
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full flex items-center ${getStatusColor(slot.status)}`}>
+                          <h4 className="text-xl font-bold text-gray-900">{slot.slotNumber}</h4>
+                          <span className={`px-3 py-2 text-xs font-bold rounded-full flex items-center ${getStatusColor(slot.status)}`}>
                             {getStatusIcon(slot.status)}
-                            <span className="ml-1">{slot.status}</span>
+                            <span className="ml-2">{slot.status}</span>
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mb-4">{slot.slotType}</p>
+                        <p className="text-sm text-gray-600 mb-6">{slot.slotType}</p>
                         
                         {slot.parkingSessions[0] && (
-                          <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                          <div className="mb-6 p-4 bg-white rounded-2xl border border-purple-200/50 shadow-lg">
                             <div className="flex items-center">
-                              <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl mr-4">
                                 {getVehicleIcon(slot.parkingSessions[0].vehicle.type)}
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
+                                <p className="font-bold text-gray-900">{slot.parkingSessions[0].vehicle.numberPlate}</p>
                                 <p className="text-sm text-gray-600">{slot.parkingSessions[0].vehicle.type}</p>
                               </div>
                             </div>
-                            <div className="mt-2 text-xs text-gray-600">
+                            <div className="mt-3 text-xs text-gray-600 space-y-1">
                               <p>Entry: {formatISTTime(new Date(slot.parkingSessions[0].entryTime))}</p>
                               {slot.parkingSessions[0].exitTime && (
                                 <p>Exit: {formatISTTime(new Date(slot.parkingSessions[0].exitTime))}</p>
@@ -727,11 +788,11 @@ export default function Dashboard() {
                           </div>
                         )}
 
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-3">
                           {slot.status === 'Available' && (
                             <button
                               onClick={() => updateSlotStatus(slot.id, 'Maintenance')}
-                              className="flex-1 px-3 py-2 text-xs bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors duration-200"
+                              className="flex-1 px-4 py-3 text-xs font-semibold bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                             >
                               Mark Maintenance
                             </button>
@@ -739,7 +800,7 @@ export default function Dashboard() {
                           {slot.status === 'Maintenance' && (
                             <button
                               onClick={() => updateSlotStatus(slot.id, 'Available')}
-                              className="flex-1 px-3 py-2 text-xs bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200"
+                              className="flex-1 px-4 py-3 text-xs font-semibold bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                             >
                               Mark Available
                             </button>
@@ -747,7 +808,7 @@ export default function Dashboard() {
                           {slot.status === 'Occupied' && (
                             <button
                               onClick={() => openTimeEditModal(slot)}
-                              className="flex-1 px-3 py-2 text-xs bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+                              className="flex-1 px-4 py-3 text-xs font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                             >
                               Edit Time
                             </button>
@@ -764,21 +825,21 @@ export default function Dashboard() {
 
       {/* Time Edit Modal */}
       {timeEditModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Edit Slot Time</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 border border-white/20">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-2xl font-bold text-gray-900">Edit Slot Time</h3>
               <button
                 onClick={() => setTimeEditModal({ ...timeEditModal, isOpen: false })}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Slot: {timeEditModal.slotNumber}</p>
+            <div className="space-y-6">
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Slot: {timeEditModal.slotNumber}</p>
                 {timeEditModal.vehicleInfo && (
                   <p className="text-sm text-gray-600">
                     Vehicle: {timeEditModal.vehicleInfo.numberPlate} ({timeEditModal.vehicleInfo.type})
@@ -787,7 +848,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Entry Time (IST)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Entry Time (IST)</label>
                 <input
                   type="datetime-local"
                   value={timeEditModal.newEntryTime.replace(' ', 'T')}
@@ -795,12 +856,12 @@ export default function Dashboard() {
                     ...timeEditModal,
                     newEntryTime: e.target.value.replace('T', ' ')
                   })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 text-gray-900 bg-white transition-all duration-300"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Exit Time (IST) - Optional</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Exit Time (IST) - Optional</label>
                 <input
                   type="datetime-local"
                   value={timeEditModal.newExitTime ? timeEditModal.newExitTime.replace(' ', 'T') : ''}
@@ -808,20 +869,20 @@ export default function Dashboard() {
                     ...timeEditModal,
                     newExitTime: e.target.value ? e.target.value.replace('T', ' ') : ''
                   })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                  className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-500/50 focus:border-purple-400 text-gray-900 bg-white transition-all duration-300"
                 />
               </div>
 
-              <div className="flex space-x-3 pt-4">
+              <div className="flex space-x-4 pt-6">
                 <button
                   onClick={() => setTimeEditModal({ ...timeEditModal, isOpen: false })}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                  className="flex-1 px-6 py-3 text-sm font-semibold text-gray-700 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-all duration-300 transform hover:scale-105"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleTimeUpdate}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  className="flex-1 px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
                   Update Time
                 </button>
