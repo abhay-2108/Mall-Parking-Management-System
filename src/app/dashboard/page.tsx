@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { 
   Car, 
   Bike, 
   Zap, 
   Accessibility, 
-  LogOut, 
   Plus, 
   Minus,
   Search,
@@ -43,7 +41,6 @@ interface ParkingSlot {
 }
 
 export default function Dashboard() {
-  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [revenue, setRevenue] = useState<Revenue | null>(null)
   const [slots, setSlots] = useState<ParkingSlot[]>([])
@@ -143,15 +140,6 @@ export default function Dashboard() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
-
   const updateSlotStatus = async (slotId: string, status: string) => {
     try {
       const response = await fetch('/api/slots', {
@@ -202,13 +190,6 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <h1 className="text-3xl font-bold text-gray-900">Mall Parking System</h1>
-            <button
-              onClick={handleLogout}
-              className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </button>
           </div>
         </div>
       </header>
@@ -354,22 +335,22 @@ export default function Dashboard() {
                 <form onSubmit={handleEntry} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Number Plate</label>
-                                         <input
-                       type="text"
-                       value={entryForm.numberPlate}
-                       onChange={(e) => setEntryForm({...entryForm, numberPlate: e.target.value})}
-                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                       required
-                     />
+                    <input
+                      type="text"
+                      value={entryForm.numberPlate}
+                      onChange={(e) => setEntryForm({...entryForm, numberPlate: e.target.value})}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      required
+                    />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
-                                         <select
-                       value={entryForm.vehicleType}
-                       onChange={(e) => setEntryForm({...entryForm, vehicleType: e.target.value})}
-                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                     >
+                    <select
+                      value={entryForm.vehicleType}
+                      onChange={(e) => setEntryForm({...entryForm, vehicleType: e.target.value})}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    >
                       <option value="Car">Car</option>
                       <option value="Bike">Bike</option>
                       <option value="EV">EV</option>
@@ -379,11 +360,11 @@ export default function Dashboard() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Billing Type</label>
-                                         <select
-                       value={entryForm.billingType}
-                       onChange={(e) => setEntryForm({...entryForm, billingType: e.target.value})}
-                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                     >
+                    <select
+                      value={entryForm.billingType}
+                      onChange={(e) => setEntryForm({...entryForm, billingType: e.target.value})}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                    >
                       <option value="Hourly">Hourly</option>
                       <option value="DayPass">Day Pass (₹150)</option>
                     </select>
@@ -406,13 +387,13 @@ export default function Dashboard() {
                 <form onSubmit={handleExit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Number Plate</label>
-                                         <input
-                       type="text"
-                       value={exitForm.numberPlate}
-                       onChange={(e) => setExitForm({...exitForm, numberPlate: e.target.value})}
-                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                       required
-                     />
+                    <input
+                      type="text"
+                      value={exitForm.numberPlate}
+                      onChange={(e) => setExitForm({...exitForm, numberPlate: e.target.value})}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                      required
+                    />
                   </div>
 
                   <button
