@@ -19,7 +19,8 @@ import {
   XCircle,
   Edit,
   Calendar,
-  X
+  X,
+  MapPin
 } from 'lucide-react'
 import { formatISTTime, getCurrentIST } from '@/lib/time-utils'
 
@@ -69,7 +70,8 @@ export default function Dashboard() {
     numberPlate: '',
     vehicleType: 'Car',
     billingType: 'Hourly',
-    slotId: ''
+    slotId: '',
+    manualSlotSelection: false
   })
   
   // Exit form state
@@ -146,7 +148,13 @@ export default function Dashboard() {
       })
 
       if (response.ok) {
-        setEntryForm({ numberPlate: '', vehicleType: 'Car', billingType: 'Hourly', slotId: '' })
+        setEntryForm({ 
+          numberPlate: '', 
+          vehicleType: 'Car', 
+          billingType: 'Hourly', 
+          slotId: '',
+          manualSlotSelection: false
+        })
         loadDashboardData()
         showNotification('Vehicle entry recorded successfully!', 'success')
       } else {
@@ -294,6 +302,31 @@ export default function Dashboard() {
       case 'Occupied': return <Clock className="h-4 w-4" />
       case 'Maintenance': return <AlertTriangle className="h-4 w-4" />
       default: return <Settings className="h-4 w-4" />
+    }
+  }
+
+  // Get available slots for manual selection
+  const getAvailableSlots = () => {
+    return slots.filter(slot => slot.status === 'Available')
+  }
+
+  // Get compatible slots based on vehicle type
+  const getCompatibleSlots = (vehicleType: string) => {
+    const availableSlots = getAvailableSlots()
+    
+    switch (vehicleType) {
+      case 'Car':
+        return availableSlots.filter(slot => 
+          slot.slotType === 'Regular' || slot.slotType === 'Compact'
+        )
+      case 'Bike':
+        return availableSlots.filter(slot => slot.slotType === 'Compact')
+      case 'EV':
+        return availableSlots.filter(slot => slot.slotType === 'EV')
+      case 'Handicap':
+        return availableSlots.filter(slot => slot.slotType === 'Handicap')
+      default:
+        return availableSlots
     }
   }
 
@@ -539,6 +572,55 @@ export default function Dashboard() {
                       <option value="Hourly">Hourly</option>
                       <option value="DayPass">Day Pass (₹150)</option>
                     </select>
+                  </div>
+
+                  {/* Manual Slot Selection */}
+                  <div className="space-y-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="manualSlotSelection"
+                        checked={entryForm.manualSlotSelection}
+                        onChange={(e) => setEntryForm({...entryForm, manualSlotSelection: e.target.checked, slotId: ''})}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="manualSlotSelection" className="ml-2 block text-sm font-medium text-gray-700">
+                        Manually select parking slot
+                      </label>
+                    </div>
+
+                    {entryForm.manualSlotSelection && (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Select Parking Slot
+                        </label>
+                        <select
+                          value={entryForm.slotId}
+                          onChange={(e) => setEntryForm({...entryForm, slotId: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white transition-all duration-200"
+                          required={entryForm.manualSlotSelection}
+                        >
+                          <option value="">Choose a slot...</option>
+                          {getCompatibleSlots(entryForm.vehicleType).map(slot => (
+                            <option key={slot.id} value={slot.id}>
+                              {slot.slotNumber} ({slot.slotType})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Available compatible slots for {entryForm.vehicleType}: {getCompatibleSlots(entryForm.vehicleType).length}
+                        </p>
+                      </div>
+                    )}
+
+                    {!entryForm.manualSlotSelection && (
+                      <div className="flex items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <MapPin className="h-4 w-4 text-blue-600 mr-2" />
+                        <span className="text-sm text-blue-700">
+                          Automatic slot assignment will be used
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <button

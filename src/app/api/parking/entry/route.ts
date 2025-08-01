@@ -5,23 +5,10 @@ import { getDayPassAmount } from '@/lib/pricing'
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    const { numberPlate, vehicleType, billingType, slotId } = await request.json()
+    const { numberPlate, vehicleType, billingType, slotId, manualSlotSelection } = await request.json()
 
     if (!numberPlate || !vehicleType || !billingType) {
-      return NextResponse.json(
-        { error: 'Number plate, vehicle type, and billing type are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Number plate, vehicle type, and billing type are required' }, { status: 400 })
     }
 
     // Check if vehicle already has an active session
@@ -33,46 +20,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingSession) {
-      return NextResponse.json(
-        { error: 'Vehicle already has an active parking session' },
-        { status: 400 }
-      )
-    }
-
-    let assignedSlotId = slotId
-
-    // Auto-assign slot if not provided
-    if (!assignedSlotId) {
-      const availableSlot = await prisma.parkingSlot.findFirst({
-        where: {
-          status: 'Available',
-          slotType: vehicleType === 'Car' ? { in: ['Regular', 'Compact'] } :
-                   vehicleType === 'Bike' ? 'Compact' :
-                   vehicleType === 'EV' ? 'EV' :
-                   'Handicap'
-        }
-      })
-
-      if (!availableSlot) {
-        return NextResponse.json(
-          { error: 'No available slots for this vehicle type' },
-          { status: 400 }
-        )
-      }
-
-      assignedSlotId = availableSlot.id
-    }
-
-    // Verify slot is available
-    const slot = await prisma.parkingSlot.findUnique({
-      where: { id: assignedSlotId }
-    })
-
-    if (!slot || slot.status !== 'Available') {
-      return NextResponse.json(
-        { error: 'Selected slot is not available' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Vehicle already has an active parking session' }, { status: 400 })
     }
 
     // Create or update vehicle
@@ -85,13 +33,45 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    let selectedSlotId = slotId
+
+    // If manual slot selection is enabled, validate the selected slot
+    if (manualSlotSelection && slotId) {
+      const selectedSlot = await prisma.parkingSlot.findUnique({
+        where: { id: slotId }
+      })
+
+      if (!selectedSlot) {
+        return NextResponse.json({ error: 'Selected slot not found' }, { status: 404 })
+      }
+
+      if (selectedSlot.status !== 'Available') {
+        return NextResponse.json({ error: 'Selected slot is not available' }, { status: 400 })
+      }
+
+      // Check vehicle-slot compatibility
+      const isCompatible = checkVehicleSlotCompatibility(vehicleType, selectedSlot.slotType)
+      if (!isCompatible) {
+        return NextResponse.json({ 
+          error: `${vehicleType} cannot be parked in ${selectedSlot.slotType} slot` 
+        }, { status: 400 })
+      }
+    } else {
+      // Automatic slot assignment
+      selectedSlotId = await findBestAvailableSlot(vehicleType)
+      
+      if (!selectedSlotId) {
+        return NextResponse.json({ error: 'No suitable parking slot available' }, { status: 400 })
+      }
+    }
+
     // Create parking session
     const session = await prisma.parkingSession.create({
       data: {
         vehicleNumberPlate: numberPlate,
-        slotId: assignedSlotId,
+        slotId: selectedSlotId,
         billingType,
-        billingAmount: billingType === 'DayPass' ? getDayPassAmount() : null
+        billingAmount: billingType === 'DayPass' ? 150 : null
       },
       include: {
         vehicle: true,
@@ -99,21 +79,78 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Update slot status
+    // Update slot status to occupied
     await prisma.parkingSlot.update({
-      where: { id: assignedSlotId },
+      where: { id: selectedSlotId },
       data: { status: 'Occupied' }
     })
 
     return NextResponse.json({
-      message: 'Vehicle entry recorded successfully',
-      session
+      success: true,
+      session: {
+        ...session,
+        entryTime: session.entryTime.toISOString()
+      }
     })
+
   } catch (error) {
     console.error('Entry error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to record entry' }, { status: 500 })
   }
+}
+
+function checkVehicleSlotCompatibility(vehicleType: string, slotType: string): boolean {
+  switch (vehicleType) {
+    case 'Car':
+      return slotType === 'Regular' || slotType === 'Compact'
+    case 'Bike':
+      return slotType === 'Compact'
+    case 'EV':
+      return slotType === 'EV'
+    case 'Handicap':
+      return slotType === 'Handicap'
+    default:
+      return false
+  }
+}
+
+async function findBestAvailableSlot(vehicleType: string): Promise<string | null> {
+  let slotTypes: string[] = []
+
+  // Determine compatible slot types for the vehicle
+  switch (vehicleType) {
+    case 'Car':
+      slotTypes = ['Regular', 'Compact']
+      break
+    case 'Bike':
+      slotTypes = ['Compact']
+      break
+    case 'EV':
+      slotTypes = ['EV']
+      break
+    case 'Handicap':
+      slotTypes = ['Handicap']
+      break
+    default:
+      return null
+  }
+
+  // Find the best available slot (prioritize by slot type order)
+  for (const slotType of slotTypes) {
+    const availableSlot = await prisma.parkingSlot.findFirst({
+      where: {
+        slotType,
+        status: 'Available'
+      },
+      orderBy: {
+        slotNumber: 'asc'
+      }
+    })
+
+    if (availableSlot) {
+      return availableSlot.id
+    }
+  }
+
+  return null
 } 
