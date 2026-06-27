@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -40,15 +37,46 @@ enum BillingType {
   DayPass
 }
 
+enum BookingStatus {
+  Pending
+  Confirmed
+  CheckedIn
+  Cancelled
+  Completed
+}
+
+model Mall {
+  id        String   @id @default(cuid())
+  name      String
+  location  String?
+  timezone  String   @default("Asia/Kolkata")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parkingSlots    ParkingSlot[]
+  parkingSessions ParkingSession[]
+  operators       Operator[]
+  auditLogs       AuditLog[]
+  parkingRates    ParkingRate[]
+  pricingRules    PricingRule[]
+  holidays        Holiday[]
+  bookings        Booking[]
+  vehicles        Vehicle[]
+
+  @@map("malls")
+}
+
 model Vehicle {
   id           String   @id @default(cuid())
   numberPlate  String   @unique
   vehicleType  VehicleType
+  mallId       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Relations
   parkingSessions ParkingSession[]
+  mall            Mall?          @relation(fields: [mallId], references: [id], onDelete: SetNull)
 
   @@map("vehicles")
 }
@@ -58,11 +86,12 @@ model ParkingSlot {
   slotNumber String     @unique
   slotType   SlotType
   status     SlotStatus @default(Available)
+  mallId     String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  // Relations
   parkingSessions ParkingSession[]
+  mall            Mall?          @relation(fields: [mallId], references: [id], onDelete: SetNull)
 
   @@map("parking_slots")
 }
@@ -72,6 +101,7 @@ model ParkingSession {
   vehicleNumberPlate String
   slotId            String
   operatorId        String?
+  mallId            String?
   entryTime         DateTime      @default(now())
   exitTime          DateTime?
   status            SessionStatus @default(Active)
@@ -80,10 +110,11 @@ model ParkingSession {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  // Relations
   vehicle  Vehicle     @relation(fields: [vehicleNumberPlate], references: [numberPlate], onDelete: Cascade)
   slot     ParkingSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
   operator Operator?   @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  mall     Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  booking  Booking?    @relation("BookingSession")
 
   @@map("parking_sessions")
 }
@@ -94,39 +125,116 @@ model Operator {
   password  String
   name      String
   role      String   @default("operator")
+  mallId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   parkingSessions ParkingSession[]
   auditLogs       AuditLog[]
+  mall            Mall?          @relation(fields: [mallId], references: [id], onDelete: SetNull)
 
   @@map("operators")
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   operatorId String?
-  action    String
-  details   String?
-  createdAt DateTime @default(now())
+  mallId     String?
+  action     String
+  details    String?
+  createdAt  DateTime @default(now())
 
-  // Relations
   operator Operator? @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  mall     Mall?     @relation(fields: [mallId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
 }
 
 model ParkingRate {
   id        String   @id @default(cuid())
-  name      String   @unique
+  name      String
+  mallId    String?
   minHours  Float?
   maxHours  Float?
   amount    Float
-  type      String   @default("hourly") // "hourly" or "dayPass"
+  type      String   @default("hourly")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  mall Mall? @relation(fields: [mallId], references: [id], onDelete: Cascade)
+
+  @@unique([name, mallId])
   @@map("parking_rates")
+}
+
+model PricingRule {
+  id              String   @id @default(cuid())
+  mallId          String?
+  name            String
+  type            String   // "peak", "holiday", "occupancy"
+  priority        Int      @default(0)
+  multiplier      Float    @default(1.0)
+  daysOfWeek      String?  // "0,1,2,3,4,5,6" (0=Sun)
+  timeStart       String?  // "HH:mm"
+  timeEnd         String?  // "HH:mm"
+  dateStart       DateTime?
+  dateEnd         DateTime?
+  minOccupancyPct Float?   // e.g. 70 for 70%
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  mall Mall? @relation(fields: [mallId], references: [id], onDelete: Cascade)
+
+  @@map("pricing_rules")
+}
+
+model Holiday {
+  id        String   @id @default(cuid())
+  mallId    String?
+  name      String
+  date      DateTime
+  multiplier Float   @default(1.5)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  mall Mall? @relation(fields: [mallId], references: [id], onDelete: Cascade)
+
+  @@unique([mallId, date])
+  @@map("holidays")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String?
+  phone     String   @unique
+  email     String?
+  createdAt DateTime @default(now())
+
+  bookings Booking[]
+
+  @@map("customers")
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  customerId String
+  mallId     String?
+  sessionId  String?       @unique
+  slotType   SlotType
+  entryTime  DateTime
+  exitTime   DateTime
+  amount     Float
+  status     BookingStatus @default(Pending)
+  paymentId  String?       @unique
+  qrCode     String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  customer Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  mall     Mall?       @relation(fields: [mallId], references: [id], onDelete: SetNull)
+  session  ParkingSession? @relation("BookingSession", fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@map("bookings")
 }

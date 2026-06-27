@@ -187,7 +187,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer */}
+          {/* Public Booking Link */}
+          <a href="/book"
+            className="block w-full py-4 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-center font-bold hover:from-green-600 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-xl">
+            🅿️ Book a Parking Slot
+          </a>
+
+          {/* Footer */}
         <div className="text-center">
           <p className="text-xs text-purple-300">
             © 2025 Mall Parking Management System
