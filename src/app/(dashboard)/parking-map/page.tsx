@@ -439,8 +439,9 @@ export default function ParkingMapPage() {
               {selectedSlot.status === 'Occupied' && (
                 <button
                   onClick={() => {
+                    const plate = selectedSlot.parkingSessions[0]?.vehicle.numberPlate
                     setSelectedSlot(null)
-                    router.push('/dashboard')
+                    router.push(`/dashboard?exit=${encodeURIComponent(plate || '')}`)
                   }}
                   className="flex-1 px-4 py-3 text-sm font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all"
                 >

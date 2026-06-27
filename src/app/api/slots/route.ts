@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { formatISTTime } from '@/lib/time-utils'
 import { slotUpdateSchema, validateRequest } from '@/lib/validation'
+import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
+    const token = request.cookies.get('token')?.value
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+
     const { searchParams } = new URL(request.url)
     const slotType = searchParams.get('slotType')
     const status = searchParams.get('status')
@@ -12,98 +19,77 @@ export async function GET(request: NextRequest) {
 
     const whereClause: Record<string, unknown> = {}
 
-    if (slotType) {
-      whereClause.slotType = slotType
-    }
-
-    if (status) {
-      whereClause.status = status
+    if (slotType) whereClause.slotType = slotType
+    if (status) whereClause.status = status
+    if (search) {
+      whereClause.OR = [
+        { slotNumber: { contains: search } },
+        { parkingSessions: { some: { vehicle: { numberPlate: { contains: search } } } } }
+      ]
     }
 
     const slots = await prisma.parkingSlot.findMany({
       where: whereClause,
       include: {
         parkingSessions: {
-          where: {
-            status: 'Active'
-          },
-          include: {
-            vehicle: true
-          }
+          where: { status: 'Active' },
+          include: { vehicle: true },
+          orderBy: { entryTime: 'desc' },
+          take: 1
         }
       },
-      orderBy: {
-        slotNumber: 'asc'
-      }
+      orderBy: { slotNumber: 'asc' }
     })
 
-    // Filter by search if provided
-    let filteredSlots = slots
-    if (search) {
-      filteredSlots = slots.filter(slot =>
-        slot.slotNumber.toLowerCase().includes(search.toLowerCase()) ||
-        slot.parkingSessions.some(session =>
-          session.vehicle.numberPlate.toLowerCase().includes(search.toLowerCase())
-        )
-      )
-    }
-
-    // Convert times to IST for display
-    const slotsWithIST = filteredSlots.map(slot => ({
+    const formattedSlots = slots.map(slot => ({
       ...slot,
-      parkingSessions: slot.parkingSessions.map(session => ({
-        ...session,
-        entryTime: formatISTTime(new Date(session.entryTime)),
-        exitTime: session.exitTime ? formatISTTime(new Date(session.exitTime)) : null
+      parkingSessions: slot.parkingSessions.map(s => ({
+        ...s,
+        entryTime: formatISTTime(s.entryTime),
+        exitTime: s.exitTime ? formatISTTime(s.exitTime) : null,
+        createdAt: formatISTTime(s.createdAt),
+        updatedAt: formatISTTime(s.updatedAt)
       }))
     }))
 
-    return NextResponse.json({ slots: slotsWithIST })
+    return NextResponse.json({ slots: formattedSlots })
   } catch (error) {
     console.error('Error fetching slots:', error)
-    return NextResponse.json({ error: 'Failed to fetch slots' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
+    const token = request.cookies.get('token')?.value
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+
     const body = await request.json()
     const validation = validateRequest(slotUpdateSchema, body)
-
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
-    }
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 })
 
     const { slotId, status } = validation.data
 
-    const updatedSlot = await prisma.parkingSlot.update({
-      where: { id: slotId },
-      data: { status },
-      include: {
-        parkingSessions: {
-          where: {
-            status: 'Active'
-          },
-          include: {
-            vehicle: true
-          }
-        }
+    const slot = await prisma.parkingSlot.findUnique({ where: { id: slotId } })
+    if (!slot) return NextResponse.json({ error: 'Slot not found' }, { status: 404 })
+
+    await prisma.parkingSlot.update({ where: { id: slotId }, data: { status } })
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        operatorId: decoded.operatorId,
+        action: 'update',
+        details: `Slot ${slot.slotNumber} status changed from ${slot.status} to ${status}`
       }
     })
 
-    return NextResponse.json({ 
-      success: true, 
-      slot: {
-        ...updatedSlot,
-        parkingSessions: updatedSlot.parkingSessions.map(session => ({
-          ...session,
-          entryTime: formatISTTime(new Date(session.entryTime)),
-          exitTime: session.exitTime ? formatISTTime(new Date(session.exitTime)) : null
-        }))
-      }
-    })
+    return NextResponse.json({ message: 'Slot status updated successfully' })
   } catch (error) {
-    console.error('Error updating slot status:', error)
-    return NextResponse.json({ error: 'Failed to update slot status' }, { status: 500 })
+    console.error('Error updating slot:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

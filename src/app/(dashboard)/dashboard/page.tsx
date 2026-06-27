@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Minus, Settings, BarChart3, AlertTriangle } from 'lucide-react'
 import { formatISTTime } from '@/lib/time-utils'
@@ -12,6 +12,7 @@ import EntryForm from '@/components/EntryForm'
 import ExitForm from '@/components/ExitForm'
 import SlotGrid from '@/components/SlotGrid'
 import TimeEditModal from '@/components/TimeEditModal'
+import ReceiptModal from '@/components/ReceiptModal'
 
 interface DashboardStats {
   totalSlots: number
@@ -19,12 +20,25 @@ interface DashboardStats {
   occupiedSlots: number
   maintenanceSlots: number
   activeSessions: number
+  floorOccupancy?: Array<{ floor: string; occupied: number; total: number }>
 }
 
 interface Revenue {
   today: number
   hourly: number
   dayPass: number
+}
+
+interface ReceiptData {
+  vehicleNumber: string
+  vehicleType: string
+  slotNumber: string
+  entryTime: string
+  exitTime: string
+  duration: number
+  billingType: string
+  amount: number
+  overstay: boolean
 }
 
 interface ParkingSlot {
@@ -54,6 +68,19 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [overstayedVehicles, setOverstayedVehicles] = useState<string[]>([])
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null)
+  const [prefillPlate, setPrefillPlate] = useState('')
+
+  // Read URL param for exit prefill
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const exitPlate = params.get('exit')
+    if (exitPlate) {
+      setPrefillPlate(exitPlate)
+      setActiveTab('exit')
+      window.history.replaceState({}, '', '/dashboard')
+    }
+  }, [])
 
   const [filters, setFilters] = useState({ slotType: '', status: '' })
 
@@ -66,28 +93,7 @@ export default function Dashboard() {
     vehicleInfo: null as { numberPlate: string; type: string } | null
   })
 
-  useEffect(() => {
-    loadDashboardData()
-    checkAuth()
-
-    const interval = setInterval(() => {
-      loadDashboardData()
-      checkOverstayedVehicles()
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/check')
-      if (!response.ok) router.push('/')
-    } catch {
-      router.push('/')
-    }
-  }
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const [statsResponse, slotsResponse] = await Promise.all([
         fetch('/api/dashboard/stats'),
@@ -109,9 +115,9 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const checkOverstayedVehicles = () => {
+  const checkOverstayedVehicles = useCallback(() => {
     const now = Date.now()
     const sixHoursMs = 6 * 60 * 60 * 1000
     const overstayed: string[] = []
@@ -126,6 +132,46 @@ export default function Dashboard() {
     })
 
     setOverstayedVehicles(overstayed)
+  }, [slots])
+
+  useEffect(() => {
+    loadDashboardData()
+    checkAuth()
+
+    const interval = setInterval(() => {
+      loadDashboardData()
+      checkOverstayedVehicles()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [loadDashboardData, checkOverstayedVehicles])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault()
+        setActiveTab('entry')
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        e.preventDefault()
+        setActiveTab('exit')
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        setActiveTab('slots')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/check')
+      if (!response.ok) router.push('/')
+    } catch {
+      router.push('/')
+    }
   }
 
   const handleEntry = async (data: { numberPlate: string; vehicleType: string; billingType: string; slotId: string; manualSlotSelection: boolean }) => {
@@ -159,7 +205,7 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         loadDashboardData()
-        showNotification(`Exit processed! Amount: ₹${data.receipt.amount}`, 'success')
+        setReceipt(data.receipt)
       } else {
         const data = await response.json()
         showNotification(data.error || 'Exit failed', 'error')
@@ -240,9 +286,20 @@ export default function Dashboard() {
     <div className="space-y-8">
       <Notification notifications={notifications} />
 
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Overview of your parking operations</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Overview of your parking operations</p>
+        </div>
+        {/* Keyboard shortcuts indicator */}
+        <div className="hidden md:flex items-center space-x-2 text-xs text-gray-500 bg-white/60 rounded-2xl px-4 py-2 border border-gray-200">
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Ctrl+E</kbd>
+          <span>Entry</span>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Ctrl+X</kbd>
+          <span>Exit</span>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Ctrl+F</kbd>
+          <span>Slots</span>
+        </div>
       </div>
 
       <StatsCards stats={stats} />
@@ -290,7 +347,7 @@ export default function Dashboard() {
         <div className="p-8">
           {activeTab === 'overview' && <ActiveSessions slots={slots} onEditTime={openTimeEditModal} />}
           {activeTab === 'entry' && <EntryForm slots={slots} onSubmit={handleEntry} />}
-          {activeTab === 'exit' && <ExitForm onSubmit={handleExit} />}
+          {activeTab === 'exit' && <ExitForm onSubmit={handleExit} prefillPlate={prefillPlate} />}
           {activeTab === 'slots' && (
             <SlotGrid
               slots={slots}
@@ -317,6 +374,10 @@ export default function Dashboard() {
         onUpdate={handleTimeUpdate}
         onClose={() => setTimeEditModal({ ...timeEditModal, isOpen: false })}
       />
+
+      {receipt && (
+        <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+      )}
     </div>
   )
 }

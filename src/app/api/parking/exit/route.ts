@@ -7,69 +7,51 @@ import { exitSchema, validateRequest } from '@/lib/validation'
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
     const body = await request.json()
     const validation = validateRequest(exitSchema, body)
-
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
-    }
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 })
 
     const { numberPlate } = validation.data
 
-    // Find active session
     const session = await prisma.parkingSession.findFirst({
-      where: {
-        vehicleNumberPlate: numberPlate,
-        status: 'Active'
-      },
-      include: {
-        vehicle: true,
-        slot: true
-      }
+      where: { vehicleNumberPlate: numberPlate, status: 'Active' },
+      include: { vehicle: true, slot: true }
     })
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'No active parking session found for this vehicle' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'No active parking session found for this vehicle' }, { status: 404 })
     }
 
     const exitTime = new Date()
     let billingAmount = session.billingAmount
 
-    // Calculate billing for hourly sessions
     if (session.billingType === 'Hourly') {
       billingAmount = calculateHourlyBilling(session.entryTime, exitTime)
     }
 
-    // Update session
     const updatedSession = await prisma.parkingSession.update({
       where: { id: session.id },
-      data: {
-        exitTime,
-        status: 'Completed',
-        billingAmount
-      },
-      include: {
-        vehicle: true,
-        slot: true
-      }
+      data: { exitTime, status: 'Completed', billingAmount },
+      include: { vehicle: true, slot: true }
     })
 
-    // Free the slot
     await prisma.parkingSlot.update({
       where: { id: session.slotId },
       data: { status: 'Available' }
+    })
+
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        operatorId: decoded.operatorId,
+        action: 'exit',
+        details: `Vehicle ${numberPlate} (${session.vehicle.vehicleType}) exited from ${session.slot.slotNumber}. Amount: ₹${billingAmount}`
+      }
     })
 
     const overstay = isOverstay(session.entryTime, exitTime)
@@ -92,9 +74,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Exit error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

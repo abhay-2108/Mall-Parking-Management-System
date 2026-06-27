@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { ThemeProvider } from '@/context/ThemeContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -54,9 +55,11 @@ export default function RootLayout({
             `
           }}
         />
-        <div className="min-h-screen bg-gray-50">
-          {children}
-        </div>
+        <ThemeProvider>
+          <div className="min-h-screen bg-gray-50">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   )

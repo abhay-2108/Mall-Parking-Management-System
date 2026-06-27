@@ -4,11 +4,15 @@ import { verifyToken } from '@/lib/auth'
 import { entrySchema, validateRequest } from '@/lib/validation'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
 
+async function createAuditLog(operatorId: string | undefined, action: string, details: string) {
+  if (!operatorId) return
+  await prisma.auditLog.create({ data: { operatorId, action, details } })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     const rateLimitResult = checkRateLimit(`entry:${ip}`, { windowMs: 60000, maxRequests: 30 })
-
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -17,18 +21,13 @@ export async function POST(request: NextRequest) {
     }
 
     const token = request.cookies.get('token')?.value
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const decoded = verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
     const body = await request.json()
     const validation = validateRequest(entrySchema, body)
-
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
@@ -37,146 +36,100 @@ export async function POST(request: NextRequest) {
 
     // Check if vehicle already has an active session
     const existingSession = await prisma.parkingSession.findFirst({
-      where: {
-        vehicleNumberPlate: numberPlate,
-        status: 'Active'
-      }
+      where: { vehicleNumberPlate: numberPlate, status: 'Active' }
     })
-
     if (existingSession) {
       return NextResponse.json({ error: 'Vehicle already has an active parking session' }, { status: 400 })
     }
 
-    // Create or update vehicle
+    // Ensure vehicle exists
     await prisma.vehicle.upsert({
       where: { numberPlate },
-      update: { vehicleType },
-      create: {
-        numberPlate,
-        vehicleType
-      }
+      create: { numberPlate, vehicleType },
+      update: { vehicleType }
     })
 
     let selectedSlotId = slotId
 
-    // If manual slot selection is enabled, validate the selected slot
     if (manualSlotSelection && slotId) {
-      const selectedSlot = await prisma.parkingSlot.findUnique({
-        where: { id: slotId }
-      })
+      const selectedSlot = await prisma.parkingSlot.findUnique({ where: { id: slotId } })
+      if (!selectedSlot) return NextResponse.json({ error: 'Selected slot not found' }, { status: 404 })
+      if (selectedSlot.status !== 'Available') return NextResponse.json({ error: 'Selected slot is not available' }, { status: 400 })
 
-      if (!selectedSlot) {
-        return NextResponse.json({ error: 'Selected slot not found' }, { status: 404 })
-      }
-
-      if (selectedSlot.status !== 'Available') {
-        return NextResponse.json({ error: 'Selected slot is not available' }, { status: 400 })
-      }
-
-      // Check vehicle-slot compatibility
       const isCompatible = checkVehicleSlotCompatibility(vehicleType, selectedSlot.slotType)
       if (!isCompatible) {
-        return NextResponse.json({ 
-          error: `${vehicleType} cannot be parked in ${selectedSlot.slotType} slot` 
-        }, { status: 400 })
+        return NextResponse.json({ error: `${vehicleType} cannot be parked in ${selectedSlot.slotType} slot` }, { status: 400 })
       }
     } else {
-      // Automatic slot assignment
       selectedSlotId = await findBestAvailableSlot(vehicleType) ?? undefined
-      
-      if (!selectedSlotId) {
-        return NextResponse.json({ error: 'No suitable parking slot available' }, { status: 400 })
-      }
+      if (!selectedSlotId) return NextResponse.json({ error: 'No suitable parking slot available' }, { status: 400 })
     }
 
     const finalSlotId = selectedSlotId as string
 
-    // Create parking session
     const session = await prisma.parkingSession.create({
       data: {
         vehicleNumberPlate: numberPlate,
         slotId: finalSlotId,
         billingType,
-        billingAmount: billingType === 'DayPass' ? 150 : null
-      },
-      include: {
-        vehicle: true,
-        slot: true
+        billingAmount: billingType === 'DayPass' ? 150 : undefined,
+        operatorId: decoded.operatorId
       }
     })
 
-    // Update slot status to occupied
     await prisma.parkingSlot.update({
-      where: { id: selectedSlotId },
+      where: { id: finalSlotId },
       data: { status: 'Occupied' }
     })
 
+    await createAuditLog(decoded.operatorId, 'entry', `Vehicle ${numberPlate} (${vehicleType}) entered at slot ${(await prisma.parkingSlot.findUnique({ where: { id: finalSlotId } }))?.slotNumber}`)
+
     return NextResponse.json({
-      success: true,
+      message: 'Vehicle entry recorded successfully',
       session: {
-        ...session,
-        entryTime: session.entryTime.toISOString()
+        id: session.id,
+        entryTime: session.entryTime,
+        slotId: finalSlotId,
+        billingType: session.billingType,
+        billingAmount: session.billingAmount
       }
     })
-
   } catch (error) {
     console.error('Entry error:', error)
-    return NextResponse.json({ error: 'Failed to record entry' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 function checkVehicleSlotCompatibility(vehicleType: string, slotType: string): boolean {
   switch (vehicleType) {
-    case 'Car':
-      return slotType === 'Regular' || slotType === 'Compact'
-    case 'Bike':
-      return slotType === 'Compact'
-    case 'EV':
-      return slotType === 'EV'
-    case 'Handicap':
-      return slotType === 'Handicap'
-    default:
-      return false
+    case 'Car': return slotType === 'Regular' || slotType === 'Compact'
+    case 'Bike': return slotType === 'Compact'
+    case 'EV': return slotType === 'EV'
+    case 'Handicap': return slotType === 'Handicap'
+    default: return false
   }
 }
 
 async function findBestAvailableSlot(vehicleType: string): Promise<string | null> {
   let slotTypes: string[] = []
-
-  // Determine compatible slot types for the vehicle
   switch (vehicleType) {
-    case 'Car':
-      slotTypes = ['Regular', 'Compact']
-      break
-    case 'Bike':
-      slotTypes = ['Compact']
-      break
-    case 'EV':
-      slotTypes = ['EV']
-      break
-    case 'Handicap':
-      slotTypes = ['Handicap']
-      break
-    default:
-      return null
+    case 'Car': slotTypes = ['Regular', 'Compact']; break
+    case 'Bike': slotTypes = ['Compact']; break
+    case 'EV': slotTypes = ['EV']; break
+    case 'Handicap': slotTypes = ['Handicap']; break
+    default: return null
   }
 
-  // Find the best available slot (prioritize by slot type order)
   for (const slotType of slotTypes) {
     const availableSlot = await prisma.parkingSlot.findFirst({
       where: {
         slotType: slotType as 'Regular' | 'Compact' | 'EV' | 'Handicap',
         status: 'Available'
       },
-      orderBy: {
-        slotNumber: 'asc'
-      }
+      orderBy: { createdAt: 'asc' }
     })
-
-    if (availableSlot) {
-      return availableSlot.id
-    }
+    if (availableSlot) return availableSlot.id
   }
 
   return null
-} 
+}

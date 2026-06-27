@@ -1,101 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifyToken } from '@/lib/auth'
 import { calculateHourlyBilling } from '@/lib/pricing'
 import { timeUpdateSchema, validateRequest } from '@/lib/validation'
 
 export async function PATCH(request: NextRequest) {
   try {
+    const token = request.cookies.get('token')?.value
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const decoded = verifyToken(token)
+    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+
     const body = await request.json()
     const validation = validateRequest(timeUpdateSchema, body)
-
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: 400 })
-    }
+    if (!validation.success) return NextResponse.json({ error: validation.error }, { status: 400 })
 
     const { slotId, newEntryTime, newExitTime } = validation.data
 
-    // Find the active session for this slot
     const activeSession = await prisma.parkingSession.findFirst({
-      where: {
-        slotId: slotId,
-        status: 'Active'
-      },
-      include: {
-        vehicle: true,
-        slot: true
-      }
+      where: { slotId, status: 'Active' },
+      include: { slot: true, vehicle: true }
     })
 
     if (!activeSession) {
       return NextResponse.json({ error: 'No active session found for this slot' }, { status: 404 })
     }
 
-    // Convert times to IST if they're provided
-    let entryTime = activeSession.entryTime
-    let exitTime = activeSession.exitTime
+    const entryTime = new Date(newEntryTime)
+    entryTime.setHours(entryTime.getHours() + 5)
+    entryTime.setMinutes(entryTime.getMinutes() + 30)
 
-    if (newEntryTime) {
-      // Convert to IST (UTC+5:30)
-      const entryDate = new Date(newEntryTime)
-      entryDate.setHours(entryDate.getHours() + 5)
-      entryDate.setMinutes(entryDate.getMinutes() + 30)
-      entryTime = entryDate
-    }
-
+    let exitTime: Date | null = null
     if (newExitTime) {
-      // Convert to IST (UTC+5:30)
-      const exitDate = new Date(newExitTime)
-      exitDate.setHours(exitDate.getHours() + 5)
-      exitDate.setMinutes(exitDate.getMinutes() + 30)
-      exitTime = exitDate
+      exitTime = new Date(newExitTime)
+      exitTime.setHours(exitTime.getHours() + 5)
+      exitTime.setMinutes(exitTime.getMinutes() + 30)
     }
 
-    // Calculate new billing amount if exit time is provided
     let billingAmount = activeSession.billingAmount
-    if (newExitTime && activeSession.billingType === 'Hourly') {
+    if (exitTime && activeSession.billingType === 'Hourly') {
       billingAmount = calculateHourlyBilling(entryTime, exitTime!)
     }
 
-    // Update the session
     const updatedSession = await prisma.parkingSession.update({
-      where: {
-        id: activeSession.id
-      },
+      where: { id: activeSession.id },
       data: {
-        entryTime: entryTime,
-        exitTime: exitTime,
-        billingAmount: billingAmount,
-        status: exitTime ? 'Completed' : 'Active'
-      },
-      include: {
-        vehicle: true,
-        slot: true
+        entryTime,
+        exitTime,
+        status: exitTime ? 'Completed' : 'Active',
+        billingAmount
       }
     })
 
-    // Update slot status if session is completed
     if (exitTime) {
       await prisma.parkingSlot.update({
-        where: {
-          id: slotId
-        },
-        data: {
-          status: 'Available'
-        }
+        where: { id: slotId },
+        data: { status: 'Available' }
       })
     }
 
-    return NextResponse.json({
-      success: true,
-      session: {
-        ...updatedSession,
-        entryTime: updatedSession.entryTime.toISOString(),
-        exitTime: updatedSession.exitTime?.toISOString() || null
+    // Create audit log
+    await prisma.auditLog.create({
+      data: {
+        operatorId: decoded.operatorId,
+        action: 'edit',
+        details: `Session time updated for ${activeSession.vehicle.numberPlate} at ${activeSession.slot.slotNumber}. Entry: ${newEntryTime}, Exit: ${newExitTime || 'N/A'}`
       }
     })
 
+    return NextResponse.json({
+      message: 'Session time updated successfully',
+      session: updatedSession
+    })
   } catch (error) {
-    console.error('Error updating slot time:', error)
-    return NextResponse.json({ error: 'Failed to update slot time' }, { status: 500 })
+    console.error('Error updating session time:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

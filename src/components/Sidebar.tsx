@@ -5,14 +5,16 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Car, LayoutDashboard, Map, History, BarChart3, Settings,
-  LogOut, Menu, X, ChevronRight
+  LogOut, Menu, X, ChevronRight, FileText, Moon, Sun
 } from 'lucide-react'
+import { useTheme } from '@/context/ThemeContext'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/parking-map', label: 'Parking Map', icon: Map },
   { href: '/history', label: 'History', icon: History },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/audit-log', label: 'Audit Log', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -21,6 +23,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -75,7 +78,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon
             return (
@@ -98,8 +101,22 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-purple-100">
+        {/* Bottom actions */}
+        <div className="p-3 border-t border-purple-100 space-y-1">
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center w-full px-4 py-3 rounded-xl text-gray-600 hover:bg-purple-100 hover:text-gray-900 transition-all duration-200"
+          >
+            {theme === 'light' ? (
+              <Moon className={`h-5 w-5 ${collapsed ? 'mx-auto' : ''}`} />
+            ) : (
+              <Sun className={`h-5 w-5 ${collapsed ? 'mx-auto' : ''}`} />
+            )}
+            {!collapsed && <span className="ml-3 font-medium">{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>}
+          </button>
+
+          {/* Logout */}
           <button
             onClick={handleLogout}
             className="flex items-center w-full px-4 py-3 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
@@ -127,7 +144,11 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
               </div>
               <span className="ml-2 font-bold text-gray-900">Parking System</span>
             </div>
-            <div className="w-9" />
+            <div className="w-9">
+              <button onClick={toggleTheme} className="p-1.5 rounded-lg hover:bg-gray-100">
+                {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
         </header>
 

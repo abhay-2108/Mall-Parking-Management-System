@@ -1,14 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Minus } from 'lucide-react'
 
 interface ExitFormProps {
   onSubmit: (numberPlate: string) => void
+  prefillPlate?: string
 }
 
-export default function ExitForm({ onSubmit }: ExitFormProps) {
+export default function ExitForm({ onSubmit, prefillPlate }: ExitFormProps) {
   const [numberPlate, setNumberPlate] = useState('')
+
+  useEffect(() => {
+    if (prefillPlate) {
+      setNumberPlate(prefillPlate)
+    }
+  }, [prefillPlate])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +36,7 @@ export default function ExitForm({ onSubmit }: ExitFormProps) {
             className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-4 focus:ring-red-500/50 focus:border-red-400 text-gray-900 bg-white transition-all duration-300 placeholder-gray-500"
             placeholder="Enter vehicle number plate"
             required
+            id="exit-plate-input"
           />
         </div>
 
