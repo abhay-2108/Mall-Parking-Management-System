@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Sparkles, MapPin } from 'lucide-react'
+import { Sparkles, MapPin } from 'lucide-react'
 
 interface ParkingSlot {
   id: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CheckCircle, XCircle } from 'lucide-react'
 
 export interface NotificationItem {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Car, Building2, Eye, EyeOff, AlertCircle, Sparkles, Shield, Clock } from 'lucide-react'
+import { Building2, Eye, EyeOff, AlertCircle, Sparkles, Shield, Clock } from 'lucide-react'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -22,7 +22,7 @@ export default function LoginPage() {
         if (response.ok) {
           router.push('/dashboard')
         }
-      } catch (error) {
+      } catch {
         // Ignore error, user needs to login
       }
     }
@@ -49,7 +49,7 @@ export default function LoginPage() {
         const data = await response.json()
         setError(data.error || 'Login failed')
       }
-    } catch (error) {
+    } catch {
       setError('Network error. Please try again.')
     } finally {
       setLoading(false)

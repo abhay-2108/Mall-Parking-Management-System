@@ -82,18 +82,20 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Automatic slot assignment
-      selectedSlotId = await findBestAvailableSlot(vehicleType)
+      selectedSlotId = await findBestAvailableSlot(vehicleType) ?? undefined
       
       if (!selectedSlotId) {
         return NextResponse.json({ error: 'No suitable parking slot available' }, { status: 400 })
       }
     }
 
+    const finalSlotId = selectedSlotId as string
+
     // Create parking session
     const session = await prisma.parkingSession.create({
       data: {
         vehicleNumberPlate: numberPlate,
-        slotId: selectedSlotId,
+        slotId: finalSlotId,
         billingType,
         billingAmount: billingType === 'DayPass' ? 150 : null
       },
@@ -163,7 +165,7 @@ async function findBestAvailableSlot(vehicleType: string): Promise<string | null
   for (const slotType of slotTypes) {
     const availableSlot = await prisma.parkingSlot.findFirst({
       where: {
-        slotType,
+        slotType: slotType as 'Regular' | 'Compact' | 'EV' | 'Handicap',
         status: 'Available'
       },
       orderBy: {

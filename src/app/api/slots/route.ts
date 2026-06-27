@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const search = searchParams.get('search')
 
-    let whereClause: Record<string, unknown> = {}
+    const whereClause: Record<string, unknown> = {}
 
     if (slotType) {
       whereClause.slotType = slotType

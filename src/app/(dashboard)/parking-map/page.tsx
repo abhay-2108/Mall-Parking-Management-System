@@ -29,7 +29,6 @@ interface ParkingSlot {
 
 const FLOORS = ['1', '2', '3']
 const SECTIONS = ['A', 'B', 'C', 'D']
-const SLOTS_PER_SECTION = 20
 
 const getVehicleIcon = (type: string, size: 'sm' | 'md' = 'sm') => {
   const sizeClass = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4'
@@ -70,7 +69,7 @@ export default function ParkingMapPage() {
   const [slots, setSlots] = useState<ParkingSlot[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedFloor, setSelectedFloor] = useState('1')
-  const [hoveredSlot, setHoveredSlot] = useState<string | null>(null)
+
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null)
 
   const [confirmDialog, setConfirmDialog] = useState({
@@ -320,8 +319,6 @@ export default function ParkingMapPage() {
                   <button
                     key={slot.id}
                     onClick={() => setSelectedSlot(slot)}
-                    onMouseEnter={() => setHoveredSlot(slot.id)}
-                    onMouseLeave={() => setHoveredSlot(null)}
                     className={`relative aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all duration-200 cursor-pointer hover:scale-110 hover:z-10 shadow-md ${getStatusStyles(slot.status)} ${getStatusBorder(slot.status)}`}
                     title={`${slot.slotNumber} - ${slot.status}${slot.parkingSessions[0] ? ` (${slot.parkingSessions[0].vehicle.numberPlate})` : ''}`}
                   >

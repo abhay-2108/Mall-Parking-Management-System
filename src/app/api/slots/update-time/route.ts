@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest) {
     // Calculate new billing amount if exit time is provided
     let billingAmount = activeSession.billingAmount
     if (newExitTime && activeSession.billingType === 'Hourly') {
-      billingAmount = calculateHourlyBilling(entryTime, exitTime)
+      billingAmount = calculateHourlyBilling(entryTime, exitTime!)
     }
 
     // Update the session

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, ChevronLeft, ChevronRight, Car, Bike, Zap, Accessibility, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
-import { formatISTTime } from '@/lib/time-utils'
+import { Search, ChevronLeft, ChevronRight, Car, Bike, Zap, Accessibility, Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 
 interface Session {
   id: string
