@@ -1,4 +1,4 @@
-const CACHE_NAME = 'parking-system-v1'
+const CACHE_NAME = 'parking-system-v2'
 const urlsToCache = [
   '/',
   '/dashboard',
@@ -10,18 +10,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
   )
-})
-
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response
-        }
-        return fetch(event.request)
-      })
-  )
+  self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
@@ -32,5 +21,28 @@ self.addEventListener('activate', (event) => {
           .map((cacheName) => caches.delete(cacheName))
       )
     })
+  )
+  self.clients.claim()
+})
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+
+  if (url.pathname.startsWith('/_next/static/chunks/')) {
+    return
+  }
+
+  if (event.request.url.includes('turbopack')) {
+    return
+  }
+
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          return response
+        }
+        return fetch(event.request)
+      })
   )
 })
