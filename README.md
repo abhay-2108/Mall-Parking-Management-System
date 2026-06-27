@@ -1,242 +1,332 @@
 # Mall Parking Management System
 
-A full-stack Next.js application for managing mall parking operations with real-time slot tracking, billing, and analytics.
+A full-stack Next.js 15 application for managing multi-mall parking operations with real-time slot tracking, dynamic surge pricing, online reservations, and comprehensive analytics.
 
-## 🏢 Features
+Built with TypeScript, TailwindCSS 4, Prisma ORM, and SQLite — designed for production-ready deployment with role-based access, audit logging, and JWT authentication.
+
+## Features
 
 ### Core Parking Operations
-- **Vehicle Entry/Exit**: Record vehicle entry and exit with automatic slot assignment
-- **Smart Slot Assignment**: Auto-assign slots based on vehicle type (Car, Bike, EV, Handicap)
-- **Real-time Dashboard**: Live statistics of available, occupied, and maintenance slots
-- **Slot Management**: Mark slots as available, occupied, or under maintenance
+- **Vehicle Entry/Exit** — Record vehicle entry with auto slot assignment and process exit with automatic bill calculation
+- **Smart Slot Assignment** — Auto-assigns Regular, Compact, EV, and Handicap slots based on vehicle type
+- **Visual Parking Map** — Interactive floor-by-floor map showing slot status (Available/Occupied/Maintenance) with click-to-exit flow
+- **Slot Management** — Mark slots for maintenance, view real-time occupancy per floor
+
+### Dynamic Surge Pricing Engine
+- **Peak Hour Rules** — Configure time-of-day and day-of-week multipliers (e.g., weekends 11AM–8PM → 1.5x)
+- **Holiday Calendar** — Set holiday dates with custom surge multipliers (e.g., Diwali, New Year → 2x)
+- **Occupancy-Based Triggers** — Auto-activate surge pricing when occupancy exceeds configurable thresholds (e.g., >70% full → 1.2x)
+- **Real-Time Display** — Entry form shows current effective rate with surge badge and reason (Peak hours / Holiday / High occupancy)
+- **Priority Evaluation** — Rules evaluated in priority order, highest matching multiplier applied
+
+### Online Reservation & Public Booking Portal
+- **3-Step Booking Flow** — Select mall → Choose vehicle type & date/time → Enter contact details → Instant QR confirmation
+- **Phone-Based Registration** — Customers auto-register via phone number (no password needed)
+- **Slot Availability Check** — Real-time availability verification before booking confirmation
+- **QR Code Generation** — Each booking gets a unique QR code for check-in at the mall
+- **Admin Booking Management** — View all reservations with status filter, check-in customers (auto-creates parking session), cancel bookings
+- **Confirmation Page** — Print-friendly confirmation with booking ID, amount, entry/exit times
+
+### Multi-Mall / Branch Support
+- **4 City Malls** — Pre-seeded: City Mall (Delhi), Galaxy Mall (Noida), Metro Mall (Bangalore), Central Plaza (New Delhi)
+- **Mall Switcher** — Dropdown in sidebar to switch between malls
+- **Scoped Dashboard** — All stats, sessions, slots, and analytics filtered to selected mall
+- **Branch Management** — Superadmin can create new malls with auto-seeded pricing rates and slots
+- **Independent Configuration** — Each mall has its own pricing rates, pricing rules, holidays, operators, and slots
 
 ### Billing System
-- **Hourly Billing**: Dynamic pricing based on duration
-  - 0-1 hour: ₹50
-  - 1-3 hours: ₹100
-  - 3-6 hours: ₹150
-  - 6+ hours: ₹200 (daily cap)
-- **Day Pass**: Flat ₹150 rate charged at entry
-- **Receipt Generation**: Automatic bill calculation and receipt display
+- **Hourly Slab Pricing** — Configurable via DB (default: ₹50/0–1h, ₹100/1–3h, ₹150/3–6h, ₹200/6h+)
+- **Day Pass** — Flat rate charged at entry (default: ₹150)
+- **Printable Receipt** — Modal with full billing breakdown, pricing slab details, and print button
+- **Time Edit** — Admins can adjust entry/exit times for edge cases (audit logged)
 
 ### Analytics & Reporting
-- **Revenue Tracking**: Daily revenue with hourly vs day pass breakdown
-- **Slot Utilization**: Real-time occupancy statistics
-- **Overstay Detection**: Flag vehicles parked for more than 6 hours
+- **Real-Time Dashboard** — Live slot counts, floor occupancy bars, active sessions
+- **Revenue Tracking** — Today's revenue with hourly vs. day pass breakdown, date range picker with presets (Today/Week/Month)
+- **CSV Export** — Download revenue reports and session history as CSV files
+- **Audit Log** — Comprehensive action log with operator names, action filters, and pagination
 
-### Security
-- **Operator Authentication**: Secure login system for parking staff
-- **Session Management**: JWT-based authentication with secure cookies
+### Security & UX
+- **JWT Authentication** — Secure login with bcrypt password hashing, rate-limited login endpoint
+- **Role-Based Access** — Operator and admin roles with permission checks
+- **Input Validation** — Zod schemas on all API routes
+- **IP Rate Limiting** — Prevents brute-force login attacks
+- **Dark Mode** — Toggle in sidebar with localStorage persistence
+- **Keyboard Shortcuts** — Ctrl+E (Entry), Ctrl+X (Exit), Ctrl+F (Slots)
+- **Responsive Design** — Mobile-friendly with collapsible sidebar
+- **Loading Skeletons** — Animated placeholders during data fetching
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Frontend**: Next.js 15 with TypeScript and TailwindCSS
-- **Backend**: Next.js API Routes
-- **Database**: SQLite with Prisma ORM
-- **Authentication**: JWT with bcrypt password hashing
-- **UI Components**: Lucide React icons
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 15 (App Router), React 19, TypeScript |
+| **Styling** | TailwindCSS 4, Lucide React icons |
+| **Backend** | Next.js API Routes (REST) |
+| **Database** | SQLite via Prisma ORM 6 |
+| **Auth** | JWT (jsonwebtoken) + bcryptjs |
+| **Validation** | Zod |
+| **Timezone** | Asia/Kolkata (IST) |
 
-## 🚀 Quick Start
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── (dashboard)/         # Authenticated routes
+│   │   ├── audit-log/       # Audit log viewer
+│   │   ├── bookings/        # Admin booking management
+│   │   ├── dashboard/       # Main dashboard (stats, entry, exit, slots)
+│   │   ├── history/         # Parking session history
+│   │   ├── parking-map/     # Visual floor map
+│   │   ├── pricing/         # Surge pricing rules & holidays
+│   │   ├── settings/        # Operators, pricing rates, malls
+│   │   └── layout.tsx       # Dashboard layout (Sidebar + MallProvider)
+│   ├── (portal)/            # Public routes
+│   │   ├── book/            # 3-step booking form
+│   │   │   └── confirm/[id] # Booking confirmation page
+│   │   └── layout.tsx       # Public portal layout
+│   ├── api/                 # REST API routes
+│   │   ├── auth/            # Login/logout/check
+│   │   ├── bookings/        # CRUD + listing
+│   │   ├── customers/       # Customer upsert
+│   │   ├── dashboard/       # Stats + CSV export
+│   │   ├── holidays/        # Holiday CRUD
+│   │   ├── malls/           # Mall CRUD
+│   │   ├── operators/       # Operator CRUD
+│   │   ├── parking/         # Entry/exit
+│   │   ├── pricing-rules/   # Rule CRUD
+│   │   ├── sessions/        # History + CSV export
+│   │   ├── settings/        # Pricing rates
+│   │   └── slots/           # Slot management + time edit
+│   ├── globals.css          # Global styles (dark mode, print, animations)
+│   ├── layout.tsx           # Root layout (ThemeProvider)
+│   └── page.tsx             # Login page with public booking link
+├── components/
+│   ├── ActiveSessions.tsx
+│   ├── ConfirmDialog.tsx
+│   ├── EntryForm.tsx        # Entry form with surge pricing badge
+│   ├── ExitForm.tsx
+│   ├── MallSwitcher.tsx     # Mall dropdown in sidebar
+│   ├── Notification.tsx
+│   ├── ParkingHistory.tsx
+│   ├── ReceiptModal.tsx     # Printable receipt
+│   ├── RevenueCard.tsx      # Revenue with date presets + export
+│   ├── Sidebar.tsx          # Navigation + mall switcher + dark mode
+│   ├── Skeleton.tsx         # Loading skeletons
+│   ├── SlotGrid.tsx
+│   ├── StatsCards.tsx       # Stats with floor occupancy bars
+│   └── TimeEditModal.tsx
+├── context/
+│   ├── MallContext.tsx      # Active mall state + localStorage
+│   └── ThemeContext.tsx     # Dark mode state
+└── lib/
+    ├── auth.ts              # JWT + bcrypt helpers
+    ├── db-pricing.ts        # DB-backed pricing rate fetching
+    ├── db.ts                # Prisma client singleton
+    ├── dynamic-pricing.ts   # Surge pricing engine
+    ├── pricing.ts           # Original hardcoded pricing (fallback)
+    ├── rate-limit.ts        # IP-based rate limiting
+    ├── time-utils.ts        # IST timezone utilities
+    └── validation.ts        # Zod schemas
+
+prisma/
+├── schema.prisma            # Full database schema
+├── seed.ts                  # Seeder (4 malls, 960 slots, pricing rates)
+└── migrations/              # Migration history
+```
+
+## Database Schema
+
+### Models
+
+| Model | Description |
+|-------|-------------|
+| **Mall** | Multi-branch support (name, location, timezone) |
+| **Vehicle** | Registered vehicles by number plate and type |
+| **ParkingSlot** | 240 slots per mall (3 floors × 4 sections × 20 slots) |
+| **ParkingSession** | Entry/exit records with billing |
+| **Operator** | Staff accounts with role-based access |
+| **AuditLog** | Immutable action trail |
+| **ParkingRate** | Configurable hourly slabs and day pass rates |
+| **PricingRule** | Surge pricing rules (peak, holiday, occupancy) |
+| **Holiday** | Calendar of holidays with multipliers |
+| **Customer** | Booking portal customers (phone-based) |
+| **Booking** | Online reservations with QR and status workflow |
+
+### Slot Naming Convention
+```
+{Section}{Floor}-{Number}
+  A1-01, B2-15, C3-20, D1-08
+```
+- Sections: A, B, C, D (20 slots each)
+- Floors: 1, 2, 3
+- Floor extracted via regex `[A-Z](\d)-`
+
+### Booking Status Workflow
+```
+Pending → Confirmed → CheckedIn → Completed
+                  ↘ Cancelled
+```
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 
 ### Installation
 
-1. **Clone and install dependencies**
-   ```bash
-   cd mall-parking-system
-   npm install
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/abhay-2108/Mall-Parking-Management-System.git
+cd Mall-Parking-Management-System
 
-2. **Set up environment variables**
-   ```bash
-   # .env file is already created with:
-   DATABASE_URL="file:./dev.db"
-   JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-   ```
+# Install dependencies
+npm install
 
-3. **Set up the database**
-   ```bash
-   npx prisma generate
-   npx prisma migrate dev
-   npm run seed
-   ```
-
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Access the application**
-   - Open [http://localhost:3000](http://localhost:3000)
-   - Login with demo credentials:
-     - Username: `admin`
-     - Password: `admin123`
-
-## 📊 System Overview
-
-### Database Schema
-
-#### Vehicle
-- `id`: Auto-generated unique identifier
-- `numberPlate`: Unique vehicle registration number
-- `vehicleType`: Car, Bike, EV, or Handicap
-- `createdAt/updatedAt`: Timestamps
-
-#### ParkingSlot
-- `id`: Auto-generated unique identifier
-- `slotNumber`: Human-readable slot identifier (e.g., "A1-12")
-- `slotType`: Regular, Compact, EV, or Handicap
-- `status`: Available, Occupied, or Maintenance
-
-#### ParkingSession
-- `id`: Auto-generated unique identifier
-- `vehicleNumberPlate`: Foreign key to Vehicle
-- `slotId`: Foreign key to ParkingSlot
-- `entryTime`: Automatic timestamp on entry
-- `exitTime`: Timestamp on exit
-- `status`: Active or Completed
-- `billingType`: Hourly or DayPass
-- `billingAmount`: Calculated amount
-
-#### Operator
-- `id`: Auto-generated unique identifier
-- `username`: Unique login username
-- `password`: Hashed password
-- `name`: Operator's full name
-
-### Slot Assignment Logic
-
-- **Car**: Assigned to Regular or Compact slots
-- **Bike**: Assigned to Compact slots only
-- **EV**: Assigned to EV slots (with charging support)
-- **Handicap**: Assigned to reserved Handicap slots
-
-### Billing Logic
-
-#### Hourly Billing
-- Calculated on exit based on duration
-- Slab-based pricing with daily cap
-- No additional charges for overstay beyond 6 hours
-
-#### Day Pass
-- Flat ₹150 charged at entry
-- No additional billing on exit
-- Valid for entire day
-
-## 🎯 Usage Guide
-
-### Vehicle Entry Process
-1. Navigate to "Vehicle Entry" tab
-2. Enter vehicle number plate
-3. Select vehicle type
-4. Choose billing type (Hourly/Day Pass)
-5. Submit to record entry
-
-### Vehicle Exit Process
-1. Navigate to "Vehicle Exit" tab
-2. Enter vehicle number plate
-3. Submit to process exit
-4. View generated receipt with billing details
-
-### Slot Management
-1. Navigate to "Slot Management" tab
-2. Filter slots by type or status
-3. Mark slots as maintenance or available
-4. View real-time occupancy status
-
-### Dashboard Overview
-- **Statistics Cards**: Total, available, occupied, and maintenance slots
-- **Revenue Tracking**: Today's revenue with breakdown
-- **Active Sessions**: Real-time view of occupied slots
-
-## 🔧 Development
-
-### Project Structure
-```
-src/
-├── app/
-│   ├── api/           # API routes
-│   ├── dashboard/     # Dashboard page
-│   ├── globals.css    # Global styles
-│   ├── layout.tsx     # Root layout
-│   └── page.tsx       # Login page
-├── lib/
-│   ├── auth.ts        # Authentication utilities
-│   ├── db.ts          # Database client
-│   └── pricing.ts     # Billing calculations
-prisma/
-├── schema.prisma      # Database schema
-└── seed.ts           # Database seeding
+# Set up environment
+cp .env.example .env
 ```
 
-### API Endpoints
+### Database Setup
 
-#### Authentication
-- `POST /api/auth/login` - Operator login
-- `POST /api/auth/logout` - Operator logout
-
-#### Parking Operations
-- `POST /api/parking/entry` - Record vehicle entry
-- `POST /api/parking/exit` - Process vehicle exit
-
-#### Dashboard
-- `GET /api/dashboard/stats` - Get parking statistics
-- `GET /api/slots` - Get parking slots with filters
-- `PATCH /api/slots` - Update slot status
-
-### Database Commands
 ```bash
 # Generate Prisma client
 npx prisma generate
 
-# Run migrations
-npx prisma migrate dev
-
-# Seed database
+# Push schema and seed data
+npx prisma db push
 npm run seed
-
-# Open Prisma Studio
-npx prisma studio
 ```
 
-## 🚀 Deployment
+### Start Development
 
-### Production Setup
-1. Update environment variables for production
-2. Use a production database (PostgreSQL recommended)
-3. Set secure JWT secret
-4. Configure proper CORS and security headers
-
-### Environment Variables
-```env
-DATABASE_URL="your-production-database-url"
-JWT_SECRET="your-secure-jwt-secret"
+```bash
+npm run dev
 ```
 
-## 📈 Future Enhancements
+Open [http://localhost:3000](http://localhost:3000) and log in with:
+- **Username:** `admin`
+- **Password:** `admin123`
 
-- **Payment Integration**: Support for digital payments
-- **Mobile App**: React Native app for operators
-- **Advanced Analytics**: Detailed reports and insights
-- **Multi-location Support**: Manage multiple parking facilities
-- **QR Code Integration**: QR-based entry/exit
-- **SMS Notifications**: Alert customers about overstay
+### Public Booking Portal
+Navigate to [http://localhost:3000/book](http://localhost:3000/book) to make a reservation without authentication.
 
-## 🤝 Contributing
+## Environment Variables
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | SQLite database path | `file:./dev.db` |
+| `JWT_SECRET` | Secret key for JWT signing | `mall-parking-secret-key-2025` |
 
-## 📄 License
+## API Endpoints
 
-This project is licensed under the MIT License.
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Operator login (rate limited) |
+| POST | `/api/auth/logout` | Operator logout |
+| GET | `/api/auth/check` | Verify authentication status |
+
+### Parking Operations
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/parking/entry` | Record vehicle entry (with audit) |
+| POST | `/api/parking/exit` | Process exit, calculate bill, return receipt |
+| GET | `/api/slots` | List slots with filters (mallId, type, status) |
+| PATCH | `/api/slots` | Update slot status (with audit) |
+| PATCH | `/api/slots/update-time` | Adjust entry/exit time (with audit) |
+
+### Dashboard & Analytics
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard/stats` | Stats, floor occupancy, revenue, rate info |
+| GET | `/api/dashboard/export` | CSV export of revenue data |
+| GET | `/api/sessions` | Paginated session history |
+| GET | `/api/sessions/export` | CSV export of sessions |
+
+### Mall Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/malls` | List all malls |
+| POST | `/api/malls` | Create mall (superadmin, auto-seeds rates) |
+| PUT | `/api/malls/[id]` | Update mall details |
+| DELETE | `/api/malls/[id]` | Delete mall (superadmin only) |
+
+### Surge Pricing
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/pricing-rules` | List rules for a mall |
+| POST | `/api/pricing-rules` | Create pricing rule |
+| PUT | `/api/pricing-rules/[id]` | Update rule |
+| DELETE | `/api/pricing-rules/[id]` | Delete rule |
+
+### Holidays
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/holidays` | List holidays for a mall |
+| POST | `/api/holidays` | Add holiday date |
+| DELETE | `/api/holidays/[id]` | Remove holiday |
+
+### Online Bookings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/bookings` | List bookings or lookup by id/qrCode |
+| POST | `/api/bookings` | Create booking with slot check |
+| PATCH | `/api/bookings/[id]` | Update booking status / link session |
+| DELETE | `/api/bookings/[id]` | Cancel booking |
+
+### Settings & Admin
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/api/operators` | List / create operators |
+| PUT/DELETE | `/api/operators/[id]` | Update / delete operator |
+| GET/PUT | `/api/settings/rates` | Get / update pricing rates |
+| GET | `/api/audit-logs` | Paginated audit logs with action filter |
+| POST | `/api/customers` | Upsert customer by phone |
+
+## Seeded Data
+
+| Entity | Count | Details |
+|--------|-------|---------|
+| **Malls** | 4 | City Mall, Galaxy Mall, Metro Mall, Central Plaza |
+| **Slots** | 960 | 240 per mall (3 floors, 4 sections, 20 slots each) |
+| **Operators** | 1 | admin / admin123 |
+| **Pricing Rates** | 20 | 5 rates × 4 malls (hourly slabs + day pass) |
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server (port 3000) |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm run seed` | Seed database with default data |
+| `npx prisma studio` | Open Prisma Studio GUI |
+| `npx prisma db push` | Push schema without migration |
+| `npx prisma migrate dev` | Create and apply migration |
+
+## Deployment
+
+```bash
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+For production:
+- Use a cloud-hosted PostgreSQL or MySQL database
+- Set a strong `JWT_SECRET` via environment variable
+- Configure proper CORS, CSP, and security headers
+- Run behind a reverse proxy (NGINX, Caddy)
+
+## License
+
+MIT
 
 ---
 
-**Built with ❤️ using Next.js, TypeScript, and TailwindCSS**
+**Built with Next.js 15, TypeScript, TailwindCSS 4, and Prisma.**
